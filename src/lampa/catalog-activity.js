@@ -96,7 +96,6 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
   return function Lampa3DMoviesActivity(activityParams = {}) {
     const scroll = new Lampa.Scroll({ mask: true, over: true });
     const root = $('<div class="lampa-3d-movies"></div>');
-    const backButton = $('<div class="lampa-3d-movies__back selector">← Back to LAMPA</div>');
     const searchButton = $(`
       <div class="lampa-3d-movies__search selector">
         <div class="lampa-3d-movies__search-title">Search 3D movies</div>
@@ -112,18 +111,18 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     let activeTracker = 'all';
 
     scroll.body().addClass('lampa-3d-movies__scroll');
-    root.append(backButton);
+    const scrollNode = scroll.render() && scroll.render()[0];
+    const handleMacWheel = (event) => {
+      if (!event.deltaY) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      scroll.wheel(Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 600));
+    };
+    if (scrollNode && typeof scrollNode.addEventListener === 'function') {
+      scrollNode.addEventListener('wheel', handleMacWheel, { capture: true, passive: false });
+    }
     root.append(searchButton);
     scroll.append(root);
-
-    backButton.on('hover:enter', () => {
-      if (activeController) activeController.abort();
-      if (Lampa.Activity && typeof Lampa.Activity.backward === 'function') {
-        Lampa.Activity.backward();
-      } else {
-        Lampa.Controller.toggle('content');
-      }
-    });
 
     const updateSearchLabel = () => {
       searchButton.find('.lampa-3d-movies__search-query')
@@ -150,11 +149,6 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       clearResults();
       allReleases = releases;
       activeTracker = 'all';
-      if (sources.length > 0) {
-        const summary = $('<div class="lampa-3d-movies__source-summary"></div>');
-        summary.text('Available trackers: ' + sources.map((source) => source.name).join(', '));
-        root.append(summary);
-      }
       if (releases.length === 0) { showMessage('No 3D releases found'); return; }
       const trackers = [...new Set(releases.map((release) => release.tracker).filter(Boolean))].sort();
       if (trackers.length > 0) {
@@ -258,7 +252,15 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    this.start = function start() {};
+    this.start = function start() {
+      Lampa.Controller.add('content', {
+        back: () => {
+          if (activeController) activeController.abort();
+          Lampa.Activity.backward();
+        },
+      });
+      Lampa.Controller.toggle('content');
+    };
 
     this.stop = function stop() {};
 
@@ -266,6 +268,9 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
+      if (scrollNode && typeof scrollNode.removeEventListener === 'function') {
+        scrollNode.removeEventListener('wheel', handleMacWheel, true);
+      }
       scroll.destroy();
       root.remove();
     };
