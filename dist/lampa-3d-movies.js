@@ -1,5 +1,7 @@
 (() => {
   var __defProp = Object.defineProperty;
+  var __defProps = Object.defineProperties;
+  var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
   var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __propIsEnum = Object.prototype.propertyIsEnumerable;
@@ -18,6 +20,7 @@
       }
     return a;
   };
+  var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
   var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
   var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
@@ -462,7 +465,7 @@
       if (parsedBaseUrl.protocol !== "http:" && parsedBaseUrl.protocol !== "https:") {
         throw new TypeError("Jackett baseUrl must use HTTP or HTTPS");
       }
-      this.apiKey = requiredString(apiKey, "apiKey");
+      this.apiKey = typeof apiKey === "string" ? apiKey.trim() : "";
       this.indexer = requiredString(indexer, "indexer");
       this.id = requiredString(id, "id");
       if (typeof fetchImpl !== "function") {
@@ -4886,7 +4889,7 @@
       if (parsedBaseUrl.protocol !== "http:" && parsedBaseUrl.protocol !== "https:") {
         throw new TypeError("Prowlarr baseUrl must use HTTP or HTTPS");
       }
-      this.apiKey = requiredString3(apiKey, "apiKey");
+      this.apiKey = typeof apiKey === "string" ? apiKey.trim() : "";
       this.id = requiredString3(id, "id");
       if (typeof fetchImpl !== "function") {
         throw new TypeError("Prowlarr fetch implementation must be a function");
@@ -5221,6 +5224,30 @@
     const value = readSetting(key);
     return typeof value === "string" ? value.trim() : "";
   }
+  function normalizeLampaUrl(value) {
+    var _a;
+    const url = value.replace("jacred.xyz", "jac.red");
+    if (/^https?:\/\//i.test(url)) return url;
+    const protocol = ((_a = globalThis.location) == null ? void 0 : _a.protocol) === "https:" ? "https://" : "http://";
+    return protocol + url;
+  }
+  function selectedLinks(readSetting, type) {
+    const use = readString(readSetting, "parser_use_link") || "one";
+    const pairs = type === "jackett" ? [
+      { urlKey: "jackett_url", keyKey: "jackett_key", id: "jackett-primary" },
+      { urlKey: "jackett_url_two", keyKey: "jackett_key_two", id: "jackett-secondary" }
+    ] : [
+      { urlKey: "prowlarr_url", keyKey: "prowlarr_key", id: "prowlarr-primary" },
+      { urlKey: "prowlarr_url_two", keyKey: "prowlarr_key_two", id: "prowlarr-secondary" }
+    ];
+    const available = pairs.map((pair) => __spreadProps(__spreadValues({}, pair), {
+      baseUrl: readString(readSetting, pair.urlKey),
+      apiKey: readString(readSetting, pair.keyKey)
+    })).filter((pair) => pair.baseUrl);
+    if (use === "one") return available.filter((pair) => pair.id.endsWith("primary"));
+    if (use === "two") return available.filter((pair) => pair.id.endsWith("secondary"));
+    return available;
+  }
   function createLampaSearchService({ readSetting, fetchImpl }) {
     if (typeof readSetting !== "function") {
       throw new TypeError("readSetting must be a function");
@@ -5229,46 +5256,35 @@
       throw new TypeError("fetchImpl must be a function");
     }
     const providers = [];
-    const jackettIndexer = readString(readSetting, "jackett_interview") === "healthy" ? "status:healthy" : "all";
-    const jackettPairs = [
-      { urlKey: "jackett_url", apiKeyKey: "jackett_key", id: "jackett-primary" },
-      { urlKey: "jackett_url_two", apiKeyKey: "jackett_key_two", id: "jackett-secondary" }
-    ];
-    for (const pair of jackettPairs) {
-      const baseUrl = readString(readSetting, pair.urlKey);
-      const apiKey = readString(readSetting, pair.apiKeyKey);
-      if (baseUrl && apiKey) {
+    const parserType = readString(readSetting, "parser_torrent_type") || "jackett";
+    if (parserType === "jackett") {
+      const indexer = readString(readSetting, "jackett_interview") === "healthy" ? "status:healthy" : "all";
+      selectedLinks(readSetting, "jackett").forEach((link) => {
         providers.push(new JackettProvider({
-          id: pair.id,
-          baseUrl,
-          apiKey,
-          indexer: jackettIndexer,
+          id: link.id,
+          baseUrl: normalizeLampaUrl(link.baseUrl),
+          apiKey: link.apiKey,
+          indexer,
           fetchImpl
         }));
-      }
-    }
-    const prowlarrPairs = [
-      { urlKey: "prowlarr_url", apiKeyKey: "prowlarr_key", id: "prowlarr-primary" },
-      { urlKey: "prowlarr_url_two", apiKeyKey: "prowlarr_key_two", id: "prowlarr-secondary" }
-    ];
-    for (const pair of prowlarrPairs) {
-      const baseUrl = readString(readSetting, pair.urlKey);
-      const apiKey = readString(readSetting, pair.apiKeyKey);
-      if (baseUrl && apiKey) {
+      });
+    } else if (parserType === "prowlarr") {
+      selectedLinks(readSetting, "prowlarr").forEach((link) => {
         providers.push(new ProwlarrProvider({
-          id: pair.id,
-          baseUrl,
-          apiKey,
+          id: link.id,
+          baseUrl: normalizeLampaUrl(link.baseUrl),
+          apiKey: link.apiKey,
           fetchImpl
         }));
-      }
+      });
+    } else if (parserType === "torrserver") {
     }
     const torznabUrl = readString(readSetting, "lampa_3d_torznab_url");
     const torznabApiKey = readString(readSetting, "lampa_3d_torznab_api_key");
     if (torznabUrl && torznabApiKey) {
       providers.push(new TorznabProvider({
         id: "torznab-custom",
-        baseUrl: torznabUrl,
+        baseUrl: normalizeLampaUrl(torznabUrl),
         apiKey: torznabApiKey,
         fetchImpl
       }));
