@@ -140,7 +140,8 @@
       ((_a = release.audioLanguages) == null ? void 0 : _a.length) ? release.audioLanguages.join(" / ") : "",
       release.bitrateMbps ? `${release.bitrateMbps} Mbps` : "",
       release.source,
-      release.hdr
+      release.hdr,
+      release.tracker ? "Source: " + release.tracker : ""
     ].filter(Boolean);
     const meta = [
       formatLabel,
@@ -188,6 +189,8 @@
       let activeController = null;
       let searchSequence = 0;
       let lastQuery = typeof activityParams.search === "string" ? activityParams.search : "";
+      let allReleases = [];
+      let activeTracker = "all";
       scroll.body().addClass("lampa-3d-movies__scroll");
       root.append(searchButton);
       scroll.append(root);
@@ -195,23 +198,49 @@
         searchButton.find(".lampa-3d-movies__search-query").text(lastQuery || "Select to enter a movie title");
       };
       const clearResults = () => {
-        root.find(".lampa-3d-movies__result, .lampa-3d-movies__message").remove();
+        root.find(".lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-summary").remove();
       };
       const showMessage = (message) => {
         const element = $('<div class="lampa-3d-movies__message"></div>');
         element.text(message);
         root.append(element);
       };
-      const renderReleases = (releases) => {
+      const renderReleaseItems = () => {
+        root.find(".lampa-3d-movies__result").remove();
+        const visible = activeTracker === "all" ? allReleases : allReleases.filter((release) => release.tracker === activeTracker);
+        visible.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
+      };
+      const renderReleases = (releases, sources = []) => {
         clearResults();
+        allReleases = releases;
+        activeTracker = "all";
+        if (sources.length > 0) {
+          const summary = $('<div class="lampa-3d-movies__source-summary"></div>');
+          summary.text("Available trackers: " + sources.map((source) => source.name).join(", "));
+          root.append(summary);
+        }
         if (releases.length === 0) {
           showMessage("No 3D releases found");
           return;
         }
-        releases.forEach((release) => {
-          const item = createResultElement($, release, Lampa, scroll);
-          root.append(item);
-        });
+        const trackers = [...new Set(releases.map((release) => release.tracker).filter(Boolean))].sort();
+        if (trackers.length > 0) {
+          const filters = $('<div class="lampa-3d-movies__source-filters"></div>');
+          const addFilter = (id, label, count) => {
+            const filter = $('<div class="lampa-3d-movies__source-filter selector"></div>');
+            filter.text(label + " (" + count + ")");
+            filter.on("hover:enter", () => {
+              activeTracker = id;
+              renderReleaseItems();
+              scroll.update(filter);
+            });
+            filters.append(filter);
+          };
+          addFilter("all", "All sources", releases.length);
+          trackers.forEach((tracker) => addFilter(tracker, tracker, releases.filter((release) => release.tracker === tracker).length));
+          root.append(filters);
+        }
+        renderReleaseItems();
       };
       const runSearch = async (query) => {
         const normalizedQuery = typeof query === "string" ? query.trim() : "";
@@ -244,7 +273,15 @@
             signal: controller.signal
           });
           if (disposed || currentSequence !== searchSequence) return;
-          renderReleases(result.releases);
+          let sources = [];
+          if (typeof configured.listSources === "function") {
+            try {
+              sources = await configured.listSources({ signal: controller.signal });
+            } catch (_error) {
+            }
+          }
+          if (disposed || currentSequence !== searchSequence) return;
+          renderReleases(result.releases, sources);
           if (result.errors.length > 0) {
             const failed = result.errors.map((entry) => entry.providerId).join(", ");
             showMessage(`Some providers failed: ${failed}`);
@@ -416,7 +453,9 @@
       audioLanguages: Object.freeze(Array.isArray(input.audioLanguages) ? input.audioLanguages.filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim()) : []),
       bitrateMbps: input.bitrateMbps == null ? null : Number.isFinite(input.bitrateMbps) && input.bitrateMbps > 0 ? input.bitrateMbps : null,
       source: optionalString(input.source, "source"),
-      hdr: optionalString(input.hdr, "hdr")
+      hdr: optionalString(input.hdr, "hdr"),
+      tracker: optionalString(input.tracker, "tracker"),
+      trackerId: optionalString(input.trackerId, "trackerId")
     });
   }
 
@@ -527,6 +566,8 @@
       format: detection.format,
       resolution: detectResolution(title)
     }, parseReleaseMetadata(title, item.Description)), {
+      tracker: typeof item.Tracker === "string" ? item.Tracker : null,
+      trackerId: typeof item.TrackerId === "string" ? item.TrackerId : null,
       sizeBytes: optionalNonNegativeInteger2(item.Size),
       seeders: optionalNonNegativeInteger2(item.Seeders),
       url: magnetUri || link
@@ -557,6 +598,30 @@
         throw new TypeError("Jackett fetch implementation must be a function");
       }
       this.fetchImpl = fetchImpl;
+    }
+    async listIndexers({ signal } = {}) {
+      var _a;
+      const url = new URL(`${this.baseUrl}/api/v2.0/indexers`);
+      if (this.apiKey) url.searchParams.set("apikey", this.apiKey);
+      const response = await this.fetchImpl(url.toString(), {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal
+      });
+      if (!response || response.ok !== true) {
+        const status = (_a = response == null ? void 0 : response.status) != null ? _a : "unknown";
+        throw new Error(`Jackett indexer list failed with HTTP ${status}`);
+      }
+      const payload = await response.json();
+      if (!Array.isArray(payload)) {
+        throw new TypeError("Jackett indexer list must be an array");
+      }
+      return payload.filter((item) => item && typeof item === "object").map((item) => ({
+        id: typeof item.id === "string" ? item.id : "",
+        name: typeof item.name === "string" ? item.name : typeof item.title === "string" ? item.title : "",
+        configured: item.configured !== false,
+        status: typeof item.status === "string" ? item.status : null
+      })).filter((item) => item.id && item.name);
     }
     async search(query, { signal } = {}) {
       var _a;
@@ -4863,6 +4928,8 @@
       format: detection.format,
       resolution: detectResolution2(title)
     }, parseReleaseMetadata(title, getText(item.description))), {
+      tracker: getTorznabAttribute(item, "jackettindexer") || getTorznabAttribute(item, "indexer"),
+      trackerId: getTorznabAttribute(item, "trackerid"),
       sizeBytes: optionalNonNegativeInteger3(size),
       seeders: optionalNonNegativeInteger3(getTorznabAttribute(item, "seeders")),
       url: magnet || link || null
@@ -5014,6 +5081,8 @@
           format: detection.format,
           resolution: detectResolution3(title)
         }, parseReleaseMetadata(title, item.description)), {
+          tracker: typeof item.indexer === "string" ? item.indexer : null,
+          trackerId: typeof item.indexerId === "string" ? String(item.indexerId) : null,
           sizeBytes: optionalNonNegativeInteger4(item.size),
           seeders: optionalNonNegativeInteger4(item.seeders),
           url: downloadUrl
@@ -5379,7 +5448,15 @@
     const registry = new ProviderRegistry(providers);
     return {
       registry,
-      searchService: new SearchService(registry.list())
+      searchService: new SearchService(registry.list()),
+      async listSources(options = {}) {
+        const sources = await Promise.all(providers.filter((provider) => typeof provider.listIndexers === "function").map((provider) => provider.listIndexers(options)));
+        const unique = /* @__PURE__ */ new Map();
+        sources.flat().forEach((source) => {
+          if (!unique.has(source.id)) unique.set(source.id, source);
+        });
+        return [...unique.values()];
+      }
     };
   }
   function createLampaSearchServiceFromHost(Lampa) {
