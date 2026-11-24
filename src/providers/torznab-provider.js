@@ -113,9 +113,12 @@ function parseFeed(xml, providerId) {
   const parsed = xmlParser.parse(xml);
   const channel = parsed?.rss?.channel;
 
-  if (!channel || typeof channel !== 'object') {
+  if (channel == null || (typeof channel !== 'object' && channel !== '')) {
     throw new TypeError('Torznab response must be a valid RSS XML feed');
   }
+
+  // fast-xml-parser represents an empty <channel></channel> as an empty string.
+  if (channel === '') return [];
 
   const items = channel.item ?? [];
   const list = Array.isArray(items) ? items : [items];
