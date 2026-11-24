@@ -151,7 +151,7 @@ describe('createLampaCatalogActivity', () => {
     host.Lampa.Input.edit.mock.calls[0][1]('Avatar');
 
     expect(host.elements.some((element) => (
-      element.textValue === 'Configure Jackett in LAMPA settings or add a Torznab endpoint in 3D Movies settings'
+      element.textValue === 'Configure Jackett or Prowlarr in LAMPA settings, or add a Torznab endpoint in 3D Movies settings'
     ))).toBe(true);
   });
 });
