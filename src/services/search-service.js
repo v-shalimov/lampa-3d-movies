@@ -182,7 +182,13 @@ export class SearchService {
         }
 
         for (const release of outcome.releases) {
-          const key = `${release.providerId}\u0000${release.providerReleaseId}`;
+          const releaseId = release.providerReleaseId;
+          const infoHash = /^[a-f0-9]{40}$/i.test(releaseId)
+            ? releaseId.toLowerCase()
+            : null;
+          const key = infoHash
+            ? `infohash:${infoHash}`
+            : `provider:${release.providerId}\\u0000${releaseId}`;
 
           if (!seenReleaseIds.has(key)) {
             seenReleaseIds.add(key);
