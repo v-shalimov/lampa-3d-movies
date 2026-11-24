@@ -10,11 +10,42 @@ function readString(readSetting, key) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeLampaUrl(value) {
+  const url = value.replace('jacred.xyz', 'jac.red');
+  if (/^https?:\/\//i.test(url)) return url;
+  const protocol = globalThis.location?.protocol === 'https:' ? 'https://' : 'http://';
+  return protocol + url;
+}
+
+function selectedLinks(readSetting, type) {
+  const use = readString(readSetting, 'parser_use_link') || 'one';
+  const pairs = type === 'jackett'
+    ? [
+      { urlKey: 'jackett_url', keyKey: 'jackett_key', id: 'jackett-primary' },
+      { urlKey: 'jackett_url_two', keyKey: 'jackett_key_two', id: 'jackett-secondary' },
+    ]
+    : [
+      { urlKey: 'prowlarr_url', keyKey: 'prowlarr_key', id: 'prowlarr-primary' },
+      { urlKey: 'prowlarr_url_two', keyKey: 'prowlarr_key_two', id: 'prowlarr-secondary' },
+    ];
+
+  const available = pairs
+    .map((pair) => ({
+      ...pair,
+      baseUrl: readString(readSetting, pair.urlKey),
+      apiKey: readString(readSetting, pair.keyKey),
+    }))
+    .filter((pair) => pair.baseUrl);
+
+  if (use === 'one') return available.filter((pair) => pair.id.endsWith('primary'));
+  if (use === 'two') return available.filter((pair) => pair.id.endsWith('secondary'));
+  return available;
+}
+
 /**
- * Builds a provider registry from LAMPA's existing Jackett settings plus
- * optional dedicated Torznab settings owned by this plugin.
- *
- * @param {{ readSetting: (key: string) => unknown, fetchImpl: Function }} options
+ * Builds providers from the same parser settings that LAMPA itself uses.
+ * The plugin follows parser_torrent_type and parser_use_link, rather than
+ * activating every configured provider or requiring duplicate credentials.
  */
 export function createLampaSearchService({ readSetting, fetchImpl }) {
   if (typeof readSetting !== 'function') {
@@ -25,55 +56,44 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
   }
 
   const providers = [];
-  const jackettIndexer = readString(readSetting, 'jackett_interview') === 'healthy'
-    ? 'status:healthy'
-    : 'all';
-  const jackettPairs = [
-    { urlKey: 'jackett_url', apiKeyKey: 'jackett_key', id: 'jackett-primary' },
-    { urlKey: 'jackett_url_two', apiKeyKey: 'jackett_key_two', id: 'jackett-secondary' },
-  ];
+  const parserType = readString(readSetting, 'parser_torrent_type') || 'jackett';
 
-  for (const pair of jackettPairs) {
-    const baseUrl = readString(readSetting, pair.urlKey);
-    const apiKey = readString(readSetting, pair.apiKeyKey);
+  if (parserType === 'jackett') {
+    const indexer = readString(readSetting, 'jackett_interview') === 'healthy'
+      ? 'status:healthy'
+      : 'all';
 
-    if (baseUrl && apiKey) {
+    selectedLinks(readSetting, 'jackett').forEach((link) => {
       providers.push(new JackettProvider({
-        id: pair.id,
-        baseUrl,
-        apiKey,
-        indexer: jackettIndexer,
+        id: link.id,
+        baseUrl: normalizeLampaUrl(link.baseUrl),
+        apiKey: link.apiKey,
+        indexer,
         fetchImpl,
       }));
-    }
-  }
-
-  const prowlarrPairs = [
-    { urlKey: 'prowlarr_url', apiKeyKey: 'prowlarr_key', id: 'prowlarr-primary' },
-    { urlKey: 'prowlarr_url_two', apiKeyKey: 'prowlarr_key_two', id: 'prowlarr-secondary' },
-  ];
-
-  for (const pair of prowlarrPairs) {
-    const baseUrl = readString(readSetting, pair.urlKey);
-    const apiKey = readString(readSetting, pair.apiKeyKey);
-
-    if (baseUrl && apiKey) {
+    });
+  } else if (parserType === 'prowlarr') {
+    selectedLinks(readSetting, 'prowlarr').forEach((link) => {
       providers.push(new ProwlarrProvider({
-        id: pair.id,
-        baseUrl,
-        apiKey,
+        id: link.id,
+        baseUrl: normalizeLampaUrl(link.baseUrl),
+        apiKey: link.apiKey,
         fetchImpl,
       }));
-    }
+    });
+  } else if (parserType === 'torrserver') {
+    // LAMPA's TorrServer parser is a separate search API, not a Torznab URL.
+    // It is intentionally not treated as Jackett or Prowlarr.
   }
 
+  // Keep the optional standalone Torznab endpoint as an additional provider.
   const torznabUrl = readString(readSetting, 'lampa_3d_torznab_url');
   const torznabApiKey = readString(readSetting, 'lampa_3d_torznab_api_key');
 
   if (torznabUrl && torznabApiKey) {
     providers.push(new TorznabProvider({
       id: 'torznab-custom',
-      baseUrl: torznabUrl,
+      baseUrl: normalizeLampaUrl(torznabUrl),
       apiKey: torznabApiKey,
       fetchImpl,
     }));
@@ -87,9 +107,6 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
   };
 }
 
-/**
- * Convenience factory for the actual LAMPA host.
- */
 export function createLampaSearchServiceFromHost(Lampa) {
   if (!Lampa?.Storage || typeof Lampa.Reguest !== 'function') {
     throw new TypeError('LAMPA Storage and Reguest APIs are required');
