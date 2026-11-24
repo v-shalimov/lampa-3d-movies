@@ -1,5 +1,6 @@
 import { detect3DFormat } from '../domain/format-detector.js';
 import { createRelease } from '../domain/release.js';
+import { parseReleaseMetadata } from '../domain/release-metadata.js';
 
 const DEFAULT_INDEXER = 'all';
 
@@ -57,6 +58,7 @@ function mapResult(item, providerId) {
     title,
     format: detection.format,
     resolution: detectResolution(title),
+    ...parseReleaseMetadata(title, item.Description),
     sizeBytes: optionalNonNegativeInteger(item.Size),
     seeders: optionalNonNegativeInteger(item.Seeders),
     url: magnetUri || link,
