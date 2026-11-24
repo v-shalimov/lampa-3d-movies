@@ -47,7 +47,7 @@ function mapResult(item, providerId) {
   const infoHash = typeof item.InfoHash === 'string' ? item.InfoHash.trim() : '';
   const providerReleaseId = infoHash || guid || magnetUri || link;
 
-  if (!providerReleaseId) {
+  if (!providerReleaseId || (!magnetUri && !link)) {
     return null;
   }
 
@@ -59,7 +59,7 @@ function mapResult(item, providerId) {
     resolution: detectResolution(title),
     sizeBytes: optionalNonNegativeInteger(item.Size),
     seeders: optionalNonNegativeInteger(item.Seeders),
-    url: magnetUri || link || guid || null,
+    url: magnetUri || link,
   });
 }
 
