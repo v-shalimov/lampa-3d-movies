@@ -175,4 +175,30 @@ describe('SearchService', () => {
       'timeoutMs must be a positive finite number',
     );
   });
+  it('deduplicates matching torrent info hashes across different providers', async () => {
+    const infoHash = 'ABCDEF0123456789ABCDEF0123456789ABCDEF01';
+    const firstRelease = release('jackett-home', infoHash);
+    const secondRelease = release('prowlarr-home', infoHash.toLowerCase());
+    const service = new SearchService([
+      { id: 'jackett-home', search: vi.fn().mockResolvedValue([firstRelease]) },
+      { id: 'prowlarr-home', search: vi.fn().mockResolvedValue([secondRelease]) },
+    ]);
+
+    expect((await service.search('Avatar')).releases).toEqual([firstRelease]);
+  });
+
+  it('does not deduplicate provider-local IDs across different providers', async () => {
+    const firstRelease = release('jackett-home', 'release-42');
+    const secondRelease = release('prowlarr-home', 'release-42');
+    const service = new SearchService([
+      { id: 'jackett-home', search: vi.fn().mockResolvedValue([firstRelease]) },
+      { id: 'prowlarr-home', search: vi.fn().mockResolvedValue([secondRelease]) },
+    ]);
+
+    expect((await service.search('Avatar')).releases).toEqual([
+      firstRelease,
+      secondRelease,
+    ]);
+  });
+
 });
