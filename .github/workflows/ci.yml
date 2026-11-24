@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   test:
     name: Unit tests
@@ -28,6 +31,17 @@ jobs:
 
       - name: Build LAMPA plugin
         run: npm run build
+
+      - name: Publish installable plugin on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/lampa-3d-movies.js
+          if ! git diff --cached --quiet; then
+            git commit -m "build: publish LAMPA plugin bundle"
+            git push
+          fi
 
       - name: Upload installable plugin
         uses: actions/upload-artifact@v4
