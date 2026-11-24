@@ -45,6 +45,7 @@ function makeHost() {
       toggle: vi.fn(),
     },
     Torrent: { start: vi.fn(), back: vi.fn() },
+    Activity: { backward: vi.fn() },
     Noty: { show: vi.fn() },
   };
 
@@ -63,6 +64,27 @@ const release = {
 };
 
 describe('createLampaCatalogActivity', () => {
+  it('returns to the previous LAMPA activity from the catalog back control', () => {
+    const host = makeHost();
+    const Activity = createLampaCatalogActivity(host.Lampa, () => ({
+      registry: { size: 0 },
+      searchService: { search: vi.fn() },
+    }), host.$);
+    const activity = new Activity({});
+    activity.activity = { loader: vi.fn(), toggle: vi.fn() };
+
+    activity.create();
+
+    const backButton = host.elements.find((element) => (
+      typeof element.markup === 'string' && element.markup.includes('lampa-3d-movies__back')
+    ));
+    expect(backButton).toBeDefined();
+    backButton.trigger('hover:enter');
+
+    expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
+  });
+
+
   it('searches configured providers and starts playback through LAMPA', async () => {
     const host = makeHost();
     const search = vi.fn().mockResolvedValue({ releases: [release], errors: [] });
