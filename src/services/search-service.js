@@ -14,6 +14,7 @@ function createAbortError() {
 
 async function searchProvider(provider, query, controller, timeoutMs) {
   let timeoutId;
+  let abortListener;
 
   const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -24,12 +25,18 @@ async function searchProvider(provider, query, controller, timeoutMs) {
     }, timeoutMs);
   });
 
+  const abortPromise = new Promise((_, reject) => {
+    abortListener = () => reject(controller.signal.reason ?? createAbortError());
+    controller.signal.addEventListener('abort', abortListener, { once: true });
+  });
+
   try {
     const providerResult = await Promise.race([
       Promise.resolve().then(() => provider.search(query, {
         signal: controller.signal,
       })),
       timeoutPromise,
+      abortPromise,
     ]);
 
     if (!Array.isArray(providerResult)) {
@@ -56,6 +63,7 @@ async function searchProvider(provider, query, controller, timeoutMs) {
     };
   } finally {
     clearTimeout(timeoutId);
+    controller.signal.removeEventListener('abort', abortListener);
   }
 }
 
