@@ -125,6 +125,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       lastQuery = normalizedQuery;
       updateSearchLabel();
       clearResults();
+      if (this.activity) this.activity.loader(false);
 
       if (!normalizedQuery) {
         showMessage('Enter a movie title to search');
