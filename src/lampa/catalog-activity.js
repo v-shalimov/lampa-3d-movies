@@ -40,7 +40,6 @@ function createResultElement($, release, Lampa, scroll) {
     release.bitrateMbps ? `${release.bitrateMbps} Mbps` : '',
     release.source,
     release.hdr,
-    release.tracker ? 'Source: ' + release.tracker : '',
   ].filter(Boolean);
 
   const meta = [
@@ -108,7 +107,6 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     let searchSequence = 0;
     let lastQuery = typeof activityParams.search === 'string' ? activityParams.search : '';
     let allReleases = [];
-    let activeTracker = 'all';
 
     // LAMPA Scroll needs an explicit viewport height on desktop browsers.
     // minus() applies layer--wheight (viewport minus LAMPA header/navigation).
@@ -136,7 +134,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     };
 
     const clearResults = () => {
-      root.find('.lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-summary').remove();
+      root.find('.lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-filters, .lampa-3d-movies__source-summary').remove();
     };
 
     const showMessage = (message) => {
@@ -145,30 +143,11 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       root.append(element);
     };
 
-    const renderReleaseItems = () => {
-      root.find('.lampa-3d-movies__result').remove();
-      const visible = activeTracker === 'all' ? allReleases : allReleases.filter((release) => release.tracker === activeTracker);
-      visible.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
-    };
-
-    const renderReleases = (releases, sources = []) => {
+    const renderReleases = (releases) => {
       clearResults();
       allReleases = releases;
-      activeTracker = 'all';
       if (releases.length === 0) { showMessage('No 3D releases found'); return; }
-      const trackers = [...new Set(releases.map((release) => release.tracker).filter(Boolean))].sort();
-      if (trackers.length > 0) {
-        const filters = $('<div class="lampa-3d-movies__source-filters"></div>');
-        const addFilter = (id, label, count) => {
-          const filter = $('<div class="lampa-3d-movies__source-filter selector"></div>');
-          filter.text(label + ' (' + count + ')');
-          filter.on('hover:enter', () => { activeTracker = id; renderReleaseItems(); scroll.update(filter); });
-          filters.append(filter);
-        };
-        trackers.forEach((tracker) => addFilter(tracker, tracker, releases.filter((release) => release.tracker === tracker).length));
-        root.append(filters);
-      }
-      renderReleaseItems();
+      releases.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
     };
 
     const runSearch = async (query) => {
@@ -210,13 +189,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
 
         if (disposed || currentSequence !== searchSequence) return;
 
-        let sources = [];
-        if (typeof configured.listSources === 'function') {
-          try { sources = await configured.listSources({ signal: controller.signal }); }
-          catch (_error) { /* Search results still include per-release tracker names. */ }
-        }
-        if (disposed || currentSequence !== searchSequence) return;
-        renderReleases(result.releases, sources);
+        renderReleases(result.releases);
 
         if (result.errors.length > 0) {
           const failed = result.errors.map((entry) => entry.providerId).join(', ');
@@ -257,23 +230,8 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // ActivitySlide installs its default controller before calling component.start().
-    // Register this component's content controller afterwards, as native LAMPA
-    // components do, so the header arrow is routed to this activity's back handler.
-    this.start = function start() {
-      Lampa.Controller.add('content', {
-        toggle: () => {
-          Lampa.Controller.collectionSet(scroll.render());
-          Lampa.Controller.collectionFocus(false, scroll.render());
-        },
-        back: () => {
-          if (activeController) activeController.abort();
-          Lampa.Activity.backward();
-        },
-      });
-      Lampa.Controller.toggle('content');
-    };
-
+    // Do not override ActivitySlide's native content controller: its back handler
+    // already calls Lampa.Activity.backward() and owns the header navigation.
     this.stop = function stop() {};
 
     this.destroy = function destroy() {
