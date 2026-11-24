@@ -50,7 +50,7 @@ export class ProwlarrProvider {
       throw new TypeError('Prowlarr baseUrl must use HTTP or HTTPS');
     }
 
-    this.apiKey = requiredString(apiKey, 'apiKey');
+    this.apiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
     this.id = requiredString(id, 'id');
 
     if (typeof fetchImpl !== 'function') {
