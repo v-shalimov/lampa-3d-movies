@@ -47,6 +47,31 @@ Credentials must be supplied by runtime configuration and must not be
 committed to the repository. Browser deployments may require a same-origin
 backend/proxy because Jackett instances do not necessarily enable CORS.
 
+
+The generic `TorznabProvider` supports standard Torznab RSS/XML search
+endpoints. Pass the complete API endpoint as `baseUrl` (not just the server
+root):
+
+```js
+import { TorznabProvider } from './src/providers/torznab-provider.js';
+
+const torznab = new TorznabProvider({
+  baseUrl: 'https://indexer.example/api',
+  apiKey: process.env.TORZNAB_API_KEY,
+  category: 'Movies/3D', // optional Torznab category ID
+  id: 'my-torznab-indexer',
+});
+
+const { releases, errors } = await new SearchService([torznab])
+  .search('Blade Runner 2049');
+```
+
+The adapter reads RSS `item` entries and Torznab `attr` metadata
+(`infohash`, `seeders`, `size`, `magneturl`), and supports magnet URLs
+from the enclosure or link. It intentionally does not assume a particular
+indexer vendor's endpoint URL; configure the exact Torznab API endpoint
+provided by that service.
+
 ## Development
 
 Requirements: Node.js 20 or newer.
