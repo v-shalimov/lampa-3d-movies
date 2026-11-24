@@ -93,9 +93,9 @@ For movie metadata, initially pass a minimal LAMPA-compatible object with `title
 
 The current providers accept an injected `fetchImpl`. Do not assume the target LAMPA browser has native `fetch`, `AbortController`, or modern module support.
 
-Implement a LAMPA transport adapter using `new Lampa.Reguest()` and its `native(url, success, error, postData, params)` method. Wrap it in the small Fetch-compatible response shape required by our providers (`ok`, `status`, `text()`). On abort, call that request instance's `clear()`. This keeps provider code independent of LAMPA and gives the host a compatibility path for older WebViews.
+Implement a LAMPA transport adapter using `new Lampa.Reguest()` and its `native(url, success, error, postData, params)` method. Wrap it in the small Fetch-compatible response shape required by our providers (`ok`, `status`, `text()`). On abort, call that request instance's `clear()`. The inspected `Reguest.clear()` implementation removes the request callback from its internal callback list; it does **not** expose or invoke the underlying XHR abort handle. Therefore the adapter can reject immediately and suppress late callbacks, but cannot guarantee that the network transfer itself stops. This keeps provider code independent of LAMPA and gives the host a compatibility path for older WebViews.
 
-The plugin build must bundle the ES modules and dependencies into a single script suitable for LAMPA's script-injection model. Choose the transpilation target only after checking the actual LAMPA runtime/browser versions we intend to support.
+The plugin build bundles the ES modules and dependencies into a single IIFE script suitable for LAMPA's script-injection model. The repository build currently targets ES2017; verify this target against the actual LAMPA runtime/browser versions before release.
 
 ## First vertical slice
 
