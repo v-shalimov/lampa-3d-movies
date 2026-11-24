@@ -1,6 +1,6 @@
 # LAMPA integration design
 
-Status: research-backed design proposal (not yet runtime-verified on a LAMPA device).
+Status: implementation committed; automated tests and real-device compatibility remain unverified.
 
 ## Research basis
 
@@ -66,7 +66,7 @@ LAMPA plugin bootstrap
         ├── Lampa network transport adapter
         ├── SearchService
         │     ├── ProviderRegistry
-        │     └── JackettProvider / TorznabProvider / ...
+        │     └── JackettProvider / ProwlarrProvider / TorznabProvider
         ├── Release → LAMPA torrent result mapper
         └── Lampa.Torrent.start(mappedResult, movieMetadata)
 ```
@@ -77,7 +77,7 @@ The mapping is a pure function and must have unit tests independent of LAMPA:
 
 | Domain Release | LAMPA torrent-result field | Rule |
 |---|---|---|
-| `title` | `Title` | Preserve full release title |
+| `title` | `title`, `Title` | Preserve full release title; both fields are required by the inspected torrent flow |
 | `url` beginning with `magnet:` | `MagnetUri` | Use as magnet source |
 | other non-empty `url` | `Link` | Use as torrent download URL |
 | `seeders` | `Seeders` | Pass through, or omit when null |
@@ -93,22 +93,25 @@ For movie metadata, initially pass a minimal LAMPA-compatible object with `title
 
 The current providers accept an injected `fetchImpl`. Do not assume the target LAMPA browser has native `fetch`, `AbortController`, or modern module support.
 
-Implement a LAMPA transport adapter using `new Lampa.Reguest()` and its `native(url, success, error, postData, params)` method. Wrap it in the small Fetch-compatible response shape required by our providers (`ok`, `status`, `text()`). On abort, call that request instance's `clear()`. The inspected `Reguest.clear()` implementation removes the request callback from its internal callback list; it does **not** expose or invoke the underlying XHR abort handle. Therefore the adapter can reject immediately and suppress late callbacks, but cannot guarantee that the network transfer itself stops. This keeps provider code independent of LAMPA and gives the host a compatibility path for older WebViews.
+Implement a LAMPA transport adapter using `new Lampa.Reguest()` and its `native(url, success, error, postData, params)` method. Wrap it in the small Fetch-compatible response shape required by our providers (`ok`, `status`, `text()`, `json()`). On abort, call that request instance's `clear()`. The inspected `Reguest.clear()` implementation removes the request callback from its internal callback list; it does **not** expose or invoke the underlying XHR abort handle. Therefore the adapter can reject immediately and suppress late callbacks, but cannot guarantee that the network transfer itself stops. This keeps provider code independent of LAMPA and gives the host a compatibility path for older WebViews.
 
 The plugin build bundles the ES modules and dependencies into a single IIFE script suitable for LAMPA's script-injection model. The repository build currently targets ES2017; verify this target against the actual LAMPA runtime/browser versions before release.
 
-## First vertical slice
+## First vertical slice — implementation status
 
-1. A plugin bootstrap that waits for `app:ready` and registers a dedicated catalog Activity.
-2. A minimal Activity with a search input and a results list.
-3. Search via the existing `SearchService` and configured provider registry.
-4. Display title, detected 3D layout, resolution, size, and seeders.
-5. On selection, map the Release and call `Lampa.Torrent.start(mapped, movieMetadata)`.
-6. On Activity destruction, abort the current search and release UI resources.
+The first catalog slice is now present in the repository:
 
-Do not add filters, pagination, settings UI, favorites, or automatic format conversion in this first slice.
+- `src/lampa/entry.js` is the browser entry point; `npm run build` bundles it into `dist/lampa-3d-movies.js`.
+- `src/lampa/plugin.js` guards duplicate loading, waits for `app:ready`, registers the Activity, injects styles, and adds the side-menu entry.
+- `src/lampa/catalog-activity.js` provides a search prompt and selectable result rows with 3D layout, resolution, size, and seeders.
+- `src/lampa/search-service.js` reuses LAMPA's existing Jackett and Prowlarr settings and adds one optional Torznab endpoint configured in the plugin settings.
+- `src/lampa/release-mapper.js` maps playable releases to the LAMPA torrent result shape.
+- Selecting a result calls `Lampa.Torrent.back()` to restore catalog focus after closing the torrent view, then delegates playback to `Lampa.Torrent.start()`.
+- Activity destruction aborts the search signal, suppresses late callbacks, and destroys the LAMPA scroll container.
 
-## TDD contract to implement next
+The current UI is deliberately small: no pagination, advanced filters, favorites, or automatic format conversion. A minimal settings section exists only for the optional Torznab endpoint and API key; Jackett/Prowlarr credentials are read from the existing LAMPA settings.
+
+## TDD coverage added
 
 ### Pure mapper tests
 
