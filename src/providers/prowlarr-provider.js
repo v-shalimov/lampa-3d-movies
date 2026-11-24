@@ -15,6 +15,11 @@ function optionalNonNegativeInteger(value) {
   return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
+function extractInfoHash(url) {
+  const match = url.match(/btih:([a-f0-9]{40})/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
 function detectResolution(title) {
   const match = title.match(/(?:^|[^a-z0-9])(4320p|2160p|1440p|1080p|720p|576p|480p)(?=$|[^a-z0-9])/i);
   return match ? match[1].toLowerCase() : null;
@@ -85,7 +90,7 @@ export class ProwlarrProvider {
       const detection = detect3DFormat(title);
       if (!detection.is3D) return releases;
 
-      const providerReleaseId = (
+      const providerReleaseId = extractInfoHash(downloadUrl) || (
         typeof item.guid === 'string' && item.guid.trim()
       ) || downloadUrl;
 
