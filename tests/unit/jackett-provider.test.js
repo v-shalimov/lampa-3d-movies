@@ -134,4 +134,18 @@ describe('JackettProvider', () => {
 
     expect(release.providerReleaseId).toBe('https://tracker.example/details/42');
   });
+  it('works with SearchService as a real provider adapter', async () => {
+    const provider = createProvider(
+      vi.fn().mockResolvedValue(createResponse(jackettSearchResponse)),
+    );
+    const { SearchService } = await import('../../src/services/search-service.js');
+    const service = new SearchService([provider]);
+
+    const result = await service.search('Avatar');
+
+    expect(result.errors).toEqual([]);
+    expect(result.releases).toHaveLength(4);
+    expect(result.releases.every((release) => release.providerId === 'jackett')).toBe(true);
+  });
+
 });
