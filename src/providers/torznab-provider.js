@@ -1,77 +1,53 @@
+import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { detect3DFormat } from '../domain/format-detector.js';
 import { createRelease } from '../domain/release.js';
 
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '#text',
+  cdataPropName: '#cdata',
+  parseAttributeValue: false,
+  trimValues: true,
+  processEntities: true,
+  isArray: (_tagName, path) => (
+    path === 'rss.channel.item' || path === 'rss.channel.item.torznab:attr'
+  ),
+});
+
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new TypeError(`Torznab ${fieldName} must be a non-empty string`);
+    throw new TypeError(\`Torznab \${fieldName} must be a non-empty string\`);
   }
 
   return value.trim();
 }
 
-function decodeXml(value) {
-  return value
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-    .replace(/&amp;/g, '&');
-}
-
-function extractText(xml, tagName) {
-  const expression = new RegExp(
-    `<(?:[\\w.-]+:)?${tagName}\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${tagName}\\s*>`,
-    'i',
-  );
-  const match = xml.match(expression);
-
-  if (!match) {
-    return null;
+function getText(value) {
+  if (typeof value === 'string') {
+    return value.trim();
   }
 
-  const content = match[1].trim();
-  const cdata = content.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
-
-  return cdata ? cdata[1] : decodeXml(content);
-}
-
-function extractAttribute(xml, tagName, attributeName) {
-  const tag = new RegExp(
-    `<(?:[\\w.-]+:)?${tagName}\\b([^>]*)/?>`,
-    'i',
-  ).exec(xml);
-
-  if (!tag) {
-    return null;
-  }
-
-  const attribute = new RegExp(
-    `(?:^|\\s)${attributeName}\\s*=\\s*(["'])([\\s\\S]*?)\\1`,
-    'i',
-  ).exec(tag[1]);
-
-  return attribute ? decodeXml(attribute[2]) : null;
-}
-
-function extractTorznabAttribute(itemXml, name) {
-  const attributes = [...itemXml.matchAll(
-    /<(?:[\w.-]+:)?attr\b([^>]*)\/?\s*>/gi,
-  )];
-
-  for (const match of attributes) {
-    const attrName = extractAttribute(match[0], 'attr', 'name');
-    if (attrName?.toLowerCase() === name.toLowerCase()) {
-      return extractAttribute(match[0], 'attr', 'value');
-    }
+  if (value && typeof value === 'object') {
+    const text = value['#text'] ?? value['#cdata'];
+    return typeof text === 'string' ? text.trim() : null;
   }
 
   return null;
 }
 
+function getTorznabAttribute(item, name) {
+  const attributes = item['torznab:attr'] ?? item.attr ?? [];
+  const list = Array.isArray(attributes) ? attributes : [attributes];
+  const match = list.find((attribute) => (
+    attribute?.['@_name']?.toLowerCase() === name.toLowerCase()
+  ));
+
+  return match?.['@_value'] ?? null;
+}
+
 function optionalNonNegativeInteger(value) {
-  if (value == null || value.trim() === '') {
+  if (value == null || String(value).trim() === '') {
     return null;
   }
 
@@ -84,8 +60,12 @@ function detectResolution(title) {
   return match ? match[1].toLowerCase() : null;
 }
 
-function mapItem(itemXml, providerId) {
-  const title = extractText(itemXml, 'title');
+function mapItem(item, providerId) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return null;
+  }
+
+  const title = getText(item.title);
   if (!title) {
     return null;
   }
@@ -95,11 +75,12 @@ function mapItem(itemXml, providerId) {
     return null;
   }
 
-  const guid = extractText(itemXml, 'guid');
-  const link = extractText(itemXml, 'link');
-  const enclosureUrl = extractAttribute(itemXml, 'enclosure', 'url');
-  const magnetUrl = extractTorznabAttribute(itemXml, 'magneturl');
-  const infoHash = extractTorznabAttribute(itemXml, 'infohash');
+  const guid = getText(item.guid);
+  const link = getText(item.link);
+  const enclosure = item.enclosure ?? {};
+  const enclosureUrl = enclosure['@_url'] ?? null;
+  const magnetUrl = getTorznabAttribute(item, 'magneturl');
+  const infoHash = getTorznabAttribute(item, 'infohash');
   const providerReleaseId = infoHash || guid || enclosureUrl || link;
 
   if (!providerReleaseId) {
@@ -108,8 +89,7 @@ function mapItem(itemXml, providerId) {
 
   const magnet = [magnetUrl, enclosureUrl, link]
     .find((value) => typeof value === 'string' && value.startsWith('magnet:')) ?? null;
-  const size = extractTorznabAttribute(itemXml, 'size')
-    ?? extractAttribute(itemXml, 'enclosure', 'length');
+  const size = getTorznabAttribute(item, 'size') ?? enclosure['@_length'];
 
   return createRelease({
     providerId,
@@ -118,25 +98,28 @@ function mapItem(itemXml, providerId) {
     format: detection.format,
     resolution: detectResolution(title),
     sizeBytes: optionalNonNegativeInteger(size),
-    seeders: optionalNonNegativeInteger(extractTorznabAttribute(itemXml, 'seeders')),
+    seeders: optionalNonNegativeInteger(getTorznabAttribute(item, 'seeders')),
     url: magnet || link || guid || null,
   });
 }
 
 function parseFeed(xml, providerId) {
-  if (
-    typeof xml !== 'string'
-    || !/<rss\b[^>]*>/i.test(xml)
-    || !/<\/rss\s*>/i.test(xml)
-    || !/<channel\b[^>]*>/i.test(xml)
-    || !/<\/channel\s*>/i.test(xml)
-  ) {
+  if (typeof xml !== 'string' || XMLValidator.validate(xml) !== true) {
     throw new TypeError('Torznab response must be a valid RSS XML feed');
   }
 
-  const items = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item\s*>/gi)];
-  return items
-    .map(([fullMatch]) => mapItem(fullMatch, providerId))
+  const parsed = xmlParser.parse(xml);
+  const channel = parsed?.rss?.channel;
+
+  if (!channel || typeof channel !== 'object') {
+    throw new TypeError('Torznab response must be a valid RSS XML feed');
+  }
+
+  const items = channel.item ?? [];
+  const list = Array.isArray(items) ? items : [items];
+
+  return list
+    .map((item) => mapItem(item, providerId))
     .filter(Boolean);
 }
 
@@ -204,7 +187,7 @@ export class TorznabProvider {
 
     if (!response || response.ok !== true) {
       const status = response?.status ?? 'unknown';
-      throw new Error(`Torznab request failed with HTTP ${status}`);
+      throw new Error(\`Torznab request failed with HTTP \${status}\`);
     }
 
     return parseFeed(await response.text(), this.id);
