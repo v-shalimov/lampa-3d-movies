@@ -55,7 +55,7 @@ describe('TorznabProvider', () => {
   });
 
   it('supports a custom provider ID and optional category', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(createResponse('<rss><channel/></rss>'));
+    const fetchImpl = vi.fn().mockResolvedValue(createResponse('<rss><channel></channel></rss>'));
     const provider = createProvider(fetchImpl, {
       id: 'prowlarr-indexer',
       category: 'Movies/3D',
@@ -69,7 +69,7 @@ describe('TorznabProvider', () => {
   });
 
   it('passes AbortSignal to fetch', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(createResponse('<rss><channel/></rss>'));
+    const fetchImpl = vi.fn().mockResolvedValue(createResponse('<rss><channel></channel></rss>'));
     const provider = createProvider(fetchImpl);
     const controller = new AbortController();
 
@@ -80,7 +80,7 @@ describe('TorznabProvider', () => {
 
   it('returns an empty array for an empty feed', async () => {
     const provider = createProvider(
-      vi.fn().mockResolvedValue(createResponse('<rss><channel/></rss>')),
+      vi.fn().mockResolvedValue(createResponse('<rss><channel></channel></rss>')),
     );
 
     await expect(provider.search('Unknown')).resolves.toEqual([]);
