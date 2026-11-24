@@ -96,6 +96,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
   return function Lampa3DMoviesActivity(activityParams = {}) {
     const scroll = new Lampa.Scroll({ mask: true, over: true });
     const root = $('<div class="lampa-3d-movies"></div>');
+    const backButton = $('<div class="lampa-3d-movies__back selector">← Back to LAMPA</div>');
     const searchButton = $(`
       <div class="lampa-3d-movies__search selector">
         <div class="lampa-3d-movies__search-title">Search 3D movies</div>
@@ -111,8 +112,18 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     let activeTracker = 'all';
 
     scroll.body().addClass('lampa-3d-movies__scroll');
+    root.append(backButton);
     root.append(searchButton);
     scroll.append(root);
+
+    backButton.on('hover:enter', () => {
+      if (activeController) activeController.abort();
+      if (Lampa.Activity && typeof Lampa.Activity.backward === 'function') {
+        Lampa.Activity.backward();
+      } else {
+        Lampa.Controller.toggle('content');
+      }
+    });
 
     const updateSearchLabel = () => {
       searchButton.find('.lampa-3d-movies__search-query')
