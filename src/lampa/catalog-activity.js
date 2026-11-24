@@ -110,6 +110,9 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     let allReleases = [];
     let activeTracker = 'all';
 
+    // LAMPA Scroll needs an explicit viewport height on desktop browsers.
+    // minus() applies layer--wheight (viewport minus LAMPA header/navigation).
+    scroll.minus();
     scroll.body().addClass('lampa-3d-movies__scroll');
     const scrollNode = scroll.render() && scroll.render()[0];
     const handleMacWheel = (event) => {
@@ -254,9 +257,22 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // ActivitySlide requires every component to expose start(). Keep this hook
-    // intentionally empty: the native ActivitySlide owns header/back navigation.
-    this.start = function start() {};
+    // ActivitySlide installs its default controller before calling component.start().
+    // Register this component's content controller afterwards, as native LAMPA
+    // components do, so the header arrow is routed to this activity's back handler.
+    this.start = function start() {
+      Lampa.Controller.add('content', {
+        toggle: () => {
+          Lampa.Controller.collectionSet(scroll.render());
+          Lampa.Controller.collectionFocus(false, scroll.render());
+        },
+        back: () => {
+          if (activeController) activeController.abort();
+          Lampa.Activity.backward();
+        },
+      });
+      Lampa.Controller.toggle('content');
+    };
 
     this.stop = function stop() {};
 
