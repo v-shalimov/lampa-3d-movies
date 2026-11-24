@@ -35,12 +35,11 @@ describe('TorznabProvider', () => {
     expect(url.searchParams.get('q')).toBe('Blade Runner 2049');
     expect(requestOptions.headers.Accept).toContain('application/rss+xml');
 
-    expect(releases).toHaveLength(4);
+    expect(releases).toHaveLength(2);
     expect(releases.map(({ format }) => format)).toEqual([
       'HALF_SBS',
       'FULL_OU',
-      'HALF_OU',
-      'UNKNOWN',
+      'FULL_OU',
     ]);
     expect(releases[0]).toMatchObject({
       providerId: 'torznab',
@@ -90,6 +89,7 @@ describe('TorznabProvider', () => {
     const xml = `<rss><channel><item>
       <title><![CDATA[Film & Film 3D HSBS 1080p]]></title>
       <guid>urn:release:one</guid>
+      <link>magnet:?xt=urn:btih:1111111111111111111111111111111111111111</link>
     </item></channel></rss>`;
     const provider = createProvider(
       vi.fn().mockResolvedValue(createResponse(xml)),
@@ -143,11 +143,11 @@ describe('TorznabProvider', () => {
     const result = await service.search('Blade Runner 2049');
 
     expect(result.errors).toEqual([]);
-    expect(result.releases).toHaveLength(4);
+    expect(result.releases).toHaveLength(2);
     expect(result.releases.every((release) => release.providerId === 'torznab')).toBe(true);
   });
   it('decodes XML entities in ordinary element text', async () => {
-    const xml = '<rss><channel><item><title>Film &amp; Film 3D HSBS</title><guid>urn:release:two</guid></item></channel></rss>';
+    const xml = '<rss><channel><item><title>Film &amp; Film 3D HSBS</title><guid>urn:release:two</guid><link>magnet:?xt=urn:btih:2222222222222222222222222222222222222222</link></item></channel></rss>';
     const provider = createProvider(
       vi.fn().mockResolvedValue(createResponse(xml)),
     );
