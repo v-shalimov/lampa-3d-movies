@@ -3,7 +3,7 @@ import { createRelease } from '../domain/release.js';
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new TypeError(`Torznab ${fieldName} must be a non-empty string`);
+    throw new TypeError(\`Torznab \${fieldName} must be a non-empty string\`);
   }
 
   return value.trim();
@@ -21,9 +21,8 @@ function decodeXml(value) {
 }
 
 function extractText(xml, tagName) {
-  const escapedTag = tagName.replace(/[.*+?^{}()|[\]\\]/g, '\\$&');
   const expression = new RegExp(
-    `<(?:[\\w.-]+:)?${escapedTag}\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${escapedTag}\\s*>`,
+    \`<(?:[\\w.-]+:)?\${tagName}\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?\${tagName}\\s*>\`,
     'i',
   );
   const match = xml.match(expression);
@@ -33,16 +32,14 @@ function extractText(xml, tagName) {
   }
 
   const content = match[1].trim();
-  const cdata = content.match(/^<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>$/);
+  const cdata = content.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
 
   return cdata ? cdata[1] : decodeXml(content);
 }
 
 function extractAttribute(xml, tagName, attributeName) {
-  const escapedTag = tagName.replace(/[.*+?^{}()|[\]\\]/g, '\\$&');
-  const escapedAttribute = attributeName.replace(/[.*+?^{}()|[\]\\]/g, '\\$&');
   const tag = new RegExp(
-    `<(?:[\\w.-]+:)?${escapedTag}\\b([^>]*)/?>`,
+    \`<(?:[\\w.-]+:)?\${tagName}\\b([^>]*)/?>\`,
     'i',
   ).exec(xml);
 
@@ -51,7 +48,7 @@ function extractAttribute(xml, tagName, attributeName) {
   }
 
   const attribute = new RegExp(
-    `(?:^|\\s)${escapedAttribute}\\s*=\\s*(["'])([\\s\\S]*?)\\1`,
+    \`(?:^|\\s)\${attributeName}\\s*=\\s*(["'])([\\s\\S]*?)\\1\`,
     'i',
   ).exec(tag[1]);
 
@@ -60,7 +57,7 @@ function extractAttribute(xml, tagName, attributeName) {
 
 function extractTorznabAttribute(itemXml, name) {
   const attributes = [...itemXml.matchAll(
-    /<(?:[\\w.-]+:)?attr\\b([^>]*)\/?\s*>/gi,
+    /<(?:[\w.-]+:)?attr\b([^>]*)\/?\s*>/gi,
   )];
 
   for (const match of attributes) {
@@ -127,7 +124,13 @@ function mapItem(itemXml, providerId) {
 }
 
 function parseFeed(xml, providerId) {
-  if (typeof xml !== 'string' || !/<rss\b[^>]*>/i.test(xml) || !/<channel\b[^>]*>/i.test(xml)) {
+  if (
+    typeof xml !== 'string'
+    || !/<rss\b[^>]*>/i.test(xml)
+    || !/<\/rss\s*>/i.test(xml)
+    || !/<channel\b[^>]*>/i.test(xml)
+    || !/<\/channel\s*>/i.test(xml)
+  ) {
     throw new TypeError('Torznab response must be a valid RSS XML feed');
   }
 
@@ -201,7 +204,7 @@ export class TorznabProvider {
 
     if (!response || response.ok !== true) {
       const status = response?.status ?? 'unknown';
-      throw new Error(`Torznab request failed with HTTP ${status}`);
+      throw new Error(\`Torznab request failed with HTTP \${status}\`);
     }
 
     return parseFeed(await response.text(), this.id);
