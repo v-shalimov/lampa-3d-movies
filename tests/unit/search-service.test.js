@@ -13,12 +13,8 @@ function release(providerId, providerReleaseId, title = 'Avatar 3D Half-SBS') {
 
 describe('SearchService', () => {
   it('searches all providers in parallel and aggregates releases', async () => {
-    const first = vi.fn().mockResolvedValue([
-      release('first', '1'),
-    ]);
-    const second = vi.fn().mockResolvedValue([
-      release('second', '2'),
-    ]);
+    const first = vi.fn().mockResolvedValue([release('first', '1')]);
+    const second = vi.fn().mockResolvedValue([release('second', '2')]);
     const service = new SearchService([
       { id: 'first', search: first },
       { id: 'second', search: second },
@@ -26,27 +22,22 @@ describe('SearchService', () => {
 
     const result = await service.search('Avatar');
 
-    expect(first).toHaveBeenCalledWith('Avatar');
-    expect(second).toHaveBeenCalledWith('Avatar');
+    expect(first).toHaveBeenCalledWith('Avatar', expect.objectContaining({
+      signal: expect.any(AbortSignal),
+    }));
+    expect(second).toHaveBeenCalledWith('Avatar', expect.objectContaining({
+      signal: expect.any(AbortSignal),
+    }));
     expect(result).toEqual({
-      releases: [
-        release('first', '1'),
-        release('second', '2'),
-      ],
+      releases: [release('first', '1'), release('second', '2')],
       errors: [],
     });
   });
 
   it('keeps successful results when one provider fails', async () => {
     const service = new SearchService([
-      {
-        id: 'working',
-        search: vi.fn().mockResolvedValue([release('working', '1')]),
-      },
-      {
-        id: 'broken',
-        search: vi.fn().mockRejectedValue(new Error('Tracker unavailable')),
-      },
+      { id: 'working', search: vi.fn().mockResolvedValue([release('working', '1')]) },
+      { id: 'broken', search: vi.fn().mockRejectedValue(new Error('Tracker unavailable')) },
     ]);
 
     const result = await service.search('Avatar');
@@ -58,9 +49,7 @@ describe('SearchService', () => {
   });
 
   it('returns an empty result when there are no providers', async () => {
-    const service = new SearchService([]);
-
-    await expect(service.search('Avatar')).resolves.toEqual({
+    await expect(new SearchService([]).search('Avatar')).resolves.toEqual({
       releases: [],
       errors: [],
     });
@@ -69,28 +58,18 @@ describe('SearchService', () => {
   it('removes duplicate release IDs returned by the same provider', async () => {
     const duplicate = release('tracker', 'same-id');
     const service = new SearchService([
-      {
-        id: 'tracker',
-        search: vi.fn().mockResolvedValue([duplicate, duplicate]),
-      },
+      { id: 'tracker', search: vi.fn().mockResolvedValue([duplicate, duplicate]) },
     ]);
 
-    const result = await service.search('Avatar');
-
-    expect(result.releases).toEqual([duplicate]);
+    expect((await service.search('Avatar')).releases).toEqual([duplicate]);
   });
 
   it('reports a provider that returns a non-array result as failed', async () => {
     const service = new SearchService([
-      {
-        id: 'malformed',
-        search: vi.fn().mockResolvedValue(null),
-      },
+      { id: 'malformed', search: vi.fn().mockResolvedValue(null) },
     ]);
 
-    const result = await service.search('Avatar');
-
-    expect(result).toEqual({
+    expect(await service.search('Avatar')).toEqual({
       releases: [],
       errors: [
         { providerId: 'malformed', message: 'Provider search must return an array' },
@@ -99,9 +78,7 @@ describe('SearchService', () => {
   });
 
   it('rejects an invalid query', async () => {
-    const service = new SearchService([]);
-
-    await expect(service.search('  ')).rejects.toThrow(
+    await expect(new SearchService([]).search('  ')).rejects.toThrow(
       'Search query must be a non-empty string',
     );
   });
@@ -114,19 +91,88 @@ describe('SearchService', () => {
 
   it('rejects a release that belongs to a different provider', async () => {
     const service = new SearchService([
+      { id: 'provider-a', search: vi.fn().mockResolvedValue([release('provider-b', '1')]) },
+    ]);
+
+    expect(await service.search('Avatar')).toEqual({
+      releases: [],
+      errors: [
+        {
+          providerId: 'provider-a',
+          message: 'Provider returned a release with a mismatched providerId',
+        },
+      ],
+    });
+  });
+
+  it('rejects duplicate provider IDs', () => {
+    expect(() => new SearchService([
+      { id: 'same', search: vi.fn() },
+      { id: ' same ', search: vi.fn() },
+    ])).toThrow('Duplicate provider id: same');
+  });
+
+  it('turns a provider timeout into a partial failure and aborts its signal', async () => {
+    vi.useFakeTimers();
+    try {
+      let providerSignal;
+      const service = new SearchService([
+        {
+          id: 'slow',
+          search: vi.fn((_query, { signal }) => {
+            providerSignal = signal;
+            return new Promise(() => {});
+          }),
+        },
+      ], { timeoutMs: 25 });
+
+      const searchPromise = service.search('Avatar');
+      await vi.advanceTimersByTimeAsync(25);
+
+      await expect(searchPromise).resolves.toEqual({
+        releases: [],
+        errors: [
+          { providerId: 'slow', message: 'Provider search timed out after 25ms' },
+        ],
+      });
+      expect(providerSignal.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects the whole search when the caller aborts', async () => {
+    const controller = new AbortController();
+    let providerSignal;
+    const service = new SearchService([
       {
-        id: 'provider-a',
-        search: vi.fn().mockResolvedValue([release('provider-b', '1')]),
+        id: 'slow',
+        search: vi.fn((_query, { signal }) => {
+          providerSignal = signal;
+          return new Promise(() => {});
+        }),
       },
     ]);
 
-    const result = await service.search('Avatar');
+    const searchPromise = service.search('Avatar', { signal: controller.signal });
+    controller.abort();
 
-    expect(result).toEqual({
-      releases: [],
-      errors: [
-        { providerId: 'provider-a', message: 'Provider returned a release with a mismatched providerId' },
-      ],
-    });
+    await expect(searchPromise).rejects.toMatchObject({ name: 'AbortError' });
+    expect(providerSignal.aborted).toBe(true);
+  });
+
+  it('rejects immediately when the caller signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      new SearchService([]).search('Avatar', { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('validates the configured timeout', () => {
+    expect(() => new SearchService([], { timeoutMs: 0 })).toThrow(
+      'timeoutMs must be a positive finite number',
+    );
   });
 });
