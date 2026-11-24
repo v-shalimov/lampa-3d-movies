@@ -119,21 +119,38 @@
     const digits = unit === 0 ? 0 : 1;
     return `${size.toFixed(digits)} ${units[unit]}`;
   }
-  function createResultElement($, release, Lampa) {
+  function createResultElement($, release, Lampa, scroll) {
+    var _a;
     const item = $(`
     <div class="lampa-3d-movies__result selector">
       <div class="lampa-3d-movies__result-title"></div>
       <div class="lampa-3d-movies__result-meta"></div>
     </div>
   `);
+    const formatLabel = {
+      HALF_SBS: "Half-SBS",
+      FULL_SBS: "Full-SBS",
+      HALF_OU: "Half-OU",
+      FULL_OU: "Full-OU",
+      UNKNOWN: "3D \xB7 layout unspecified"
+    }[release.format] || "3D";
+    const technical = [
+      release.videoCodec,
+      release.audioCodec,
+      ((_a = release.audioLanguages) == null ? void 0 : _a.length) ? release.audioLanguages.join(" / ") : "",
+      release.bitrateMbps ? `${release.bitrateMbps} Mbps` : "",
+      release.source,
+      release.hdr
+    ].filter(Boolean);
     const meta = [
-      release.format,
+      formatLabel,
       release.resolution,
       formatSize(release.sizeBytes),
       release.seeders == null ? "" : `${release.seeders} seeders`
     ].filter(Boolean).join(" \xB7 ");
     item.find(".lampa-3d-movies__result-title").text(release.title);
-    item.find(".lampa-3d-movies__result-meta").text(meta);
+    item.find(".lampa-3d-movies__result-meta").text([meta, technical.join(" \xB7 ")].filter(Boolean).join("  |  "));
+    item.on("hover:focus", () => scroll.update(item));
     item.on("hover:enter", () => {
       const torrent = Lampa.Torrent;
       if (!torrent || typeof torrent.start !== "function") {
@@ -192,7 +209,7 @@
           return;
         }
         releases.forEach((release) => {
-          const item = createResultElement($, release, Lampa);
+          const item = createResultElement($, release, Lampa, scroll);
           root.append(item);
         });
       };
@@ -393,8 +410,75 @@
       resolution: optionalString(input.resolution, "resolution"),
       sizeBytes: optionalNonNegativeInteger(input.sizeBytes, "sizeBytes"),
       seeders: optionalNonNegativeInteger(input.seeders, "seeders"),
-      url: optionalString(input.url, "url")
+      url: optionalString(input.url, "url"),
+      videoCodec: optionalString(input.videoCodec, "videoCodec"),
+      audioCodec: optionalString(input.audioCodec, "audioCodec"),
+      audioLanguages: Object.freeze(Array.isArray(input.audioLanguages) ? input.audioLanguages.filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim()) : []),
+      bitrateMbps: input.bitrateMbps == null ? null : Number.isFinite(input.bitrateMbps) && input.bitrateMbps > 0 ? input.bitrateMbps : null,
+      source: optionalString(input.source, "source"),
+      hdr: optionalString(input.hdr, "hdr")
     });
+  }
+
+  // src/domain/release-metadata.js
+  var LANGUAGE_PATTERNS = [
+    ["Russian", /\b(?:rus|russian|русский|рус)\b/i],
+    ["English", /\b(?:eng|english)\b/i],
+    ["Ukrainian", /\b(?:ukr|ukrainian|украинский|українська)\b/i],
+    ["Polish", /\b(?:pol|polish|польский|polski)\b/i],
+    ["German", /\b(?:ger|german|deu)\b/i],
+    ["French", /\b(?:fre|french|fra)\b/i],
+    ["Spanish", /\b(?:spa|spanish|esp)\b/i],
+    ["Italian", /\b(?:ita|italian)\b/i]
+  ];
+  function firstMatch(text, patterns) {
+    for (const [value, pattern] of patterns) {
+      if (pattern.test(text)) return value;
+    }
+    return null;
+  }
+  function parseReleaseMetadata(title, description = "") {
+    const text = [title, description].filter(Boolean).join(" ");
+    const languages = LANGUAGE_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([language]) => language);
+    const bitrateMatch = text.match(/\b(\d+(?:[.,]\d+)?)\s*(?:mbps|mb\/s|mbit\/s)\b/i);
+    const audioCodec = firstMatch(text, [
+      ["Dolby Atmos", /\batmos\b/i],
+      ["TrueHD", /\btruehd\b/i],
+      ["DTS-HD MA", /\bdts[- .]?hd(?:[- .]?ma| master audio)\b/i],
+      ["DTS", /\bdts\b/i],
+      ["E-AC-3", /\b(?:eac3|e-ac-3|ddp)\b/i],
+      ["AC-3", /\b(?:ac3|ac-3|dd)\b/i],
+      ["AAC", /\baac\b/i],
+      ["FLAC", /\bflac\b/i]
+    ]);
+    const videoCodec = firstMatch(text, [
+      ["AV1", /\bav1\b/i],
+      ["HEVC / H.265", /\b(?:hevc|h\.?265|x265)\b/i],
+      ["AVC / H.264", /\b(?:avc|h\.?264|x264)\b/i],
+      ["VC-1", /\bvc-?1\b/i],
+      ["MPEG-2", /\bmpeg-?2\b/i]
+    ]);
+    const source = firstMatch(text, [
+      ["Blu-ray", /\b(?:blu.?ray|bdrip|bdremux)\b/i],
+      ["WEB-DL", /\bweb[- .]?dl\b/i],
+      ["WEBRip", /\bwebrip\b/i],
+      ["HDTV", /\bhdtv\b/i],
+      ["Remux", /\bremux\b/i]
+    ]);
+    const hdr = firstMatch(text, [
+      ["Dolby Vision", /\bdolby.?vision\b/i],
+      ["HDR10+", /\bhdr10\+\b/i],
+      ["HDR10", /\bhdr10\b/i],
+      ["HDR", /\bhdr\b/i]
+    ]);
+    return {
+      videoCodec,
+      audioCodec,
+      audioLanguages: languages,
+      bitrateMbps: bitrateMatch ? Number(bitrateMatch[1].replace(",", ".")) : null,
+      source,
+      hdr
+    };
   }
 
   // src/providers/jackett-provider.js
@@ -436,16 +520,17 @@
     if (!providerReleaseId || !magnetUri && !link) {
       return null;
     }
-    return createRelease({
+    return createRelease(__spreadProps(__spreadValues({
       providerId,
       providerReleaseId,
       title,
       format: detection.format,
-      resolution: detectResolution(title),
+      resolution: detectResolution(title)
+    }, parseReleaseMetadata(title, item.Description)), {
       sizeBytes: optionalNonNegativeInteger2(item.Size),
       seeders: optionalNonNegativeInteger2(item.Seeders),
       url: magnetUri || link
-    });
+    }));
   }
   var JackettProvider = class {
     constructor({
@@ -4771,16 +4856,17 @@
     const magnet = (_c = [magnetUrl, enclosureUrl, link].find((value) => typeof value === "string" && value.startsWith("magnet:"))) != null ? _c : null;
     if (!magnet && !link) return null;
     const size = (_d = getTorznabAttribute(item, "size")) != null ? _d : enclosure["@_length"];
-    return createRelease({
+    return createRelease(__spreadProps(__spreadValues({
       providerId,
       providerReleaseId,
       title,
       format: detection.format,
-      resolution: detectResolution2(title),
+      resolution: detectResolution2(title)
+    }, parseReleaseMetadata(title, getText(item.description))), {
       sizeBytes: optionalNonNegativeInteger3(size),
       seeders: optionalNonNegativeInteger3(getTorznabAttribute(item, "seeders")),
       url: magnet || link || null
-    });
+    }));
   }
   function parseFeed(xml, providerId) {
     var _a, _b;
@@ -4921,16 +5007,17 @@
         const detection = detect3DFormat(title);
         if (!detection.is3D) return releases;
         const providerReleaseId = extractInfoHash(downloadUrl) || typeof item.guid === "string" && item.guid.trim() || downloadUrl;
-        releases.push(createRelease({
+        releases.push(createRelease(__spreadProps(__spreadValues({
           providerId: this.id,
           providerReleaseId,
           title,
           format: detection.format,
-          resolution: detectResolution3(title),
+          resolution: detectResolution3(title)
+        }, parseReleaseMetadata(title, item.description)), {
           sizeBytes: optionalNonNegativeInteger4(item.size),
           seeders: optionalNonNegativeInteger4(item.seeders),
           url: downloadUrl
-        }));
+        })));
         return releases;
       }, []);
     }
