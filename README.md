@@ -73,6 +73,41 @@ from the enclosure or link. It intentionally does not assume a particular
 indexer vendor's endpoint URL; configure the exact Torznab API endpoint
 provided by that service.
 
+
+## Runtime provider registry
+
+Create provider instances with unique, stable IDs and register them once at
+application startup. The registry does not persist API keys or endpoint
+configuration; keep those in the host application's secure settings.
+
+```js
+import { ProviderRegistry } from './src/services/provider-registry.js';
+
+const providers = new ProviderRegistry([
+  new JackettProvider({
+    id: 'jackett-home',
+    baseUrl: process.env.JACKETT_URL,
+    apiKey: process.env.JACKETT_API_KEY,
+  }),
+  new TorznabProvider({
+    id: 'prowlarr-home',
+    baseUrl: process.env.PROWLARR_TORZNAB_URL,
+    apiKey: process.env.PROWLARR_API_KEY,
+  }),
+]);
+
+const searchService = new SearchService(providers.list());
+const result = await searchService.search('Avatar');
+```
+
+Use `register` and `unregister` to change the active provider set. A
+`SearchService` receives a snapshot from `list()`; construct a new service
+after changing the registry if the new provider set should take effect.
+
+Search aggregation deduplicates matching 40-character hexadecimal torrent
+info hashes across providers. Other provider-local release IDs remain scoped
+to their provider to avoid incorrectly merging unrelated results.
+
 ## Development
 
 Requirements: Node.js 20 or newer.
