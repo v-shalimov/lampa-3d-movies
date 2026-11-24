@@ -122,7 +122,7 @@ describe('JackettProvider', () => {
     })).toThrow('Jackett apiKey must be a non-empty string');
   });
 
-  it('uses a fallback identifier when InfoHash is absent', async () => {
+  it('does not treat a Guid details page as a playable torrent URL', async () => {
     const provider = createProvider(vi.fn().mockResolvedValue(createResponse({
       Results: [{
         Title: 'Dune (2021) 3D HSBS',
@@ -130,9 +130,7 @@ describe('JackettProvider', () => {
       }],
     })));
 
-    const [release] = await provider.search('Dune');
-
-    expect(release.providerReleaseId).toBe('https://tracker.example/details/42');
+    await expect(provider.search('Dune')).resolves.toEqual([]);
   });
   it('works with SearchService as a real provider adapter', async () => {
     const provider = createProvider(
