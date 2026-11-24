@@ -265,6 +265,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     };
 
     this.destroy = function destroy() {
+      restoreHeaderBack();
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
