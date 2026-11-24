@@ -65,7 +65,7 @@ const release = {
 };
 
 describe('createLampaCatalogActivity', () => {
-  it('registers the native LAMPA header back action on the content controller', () => {
+  it('does not override the native LAMPA content controller', () => {
     const host = makeHost();
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
@@ -75,16 +75,10 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.create();
-    activity.start();
 
-    const controller = host.Lampa.Controller.add.mock.calls[0][1];
-    expect(controller.back).toBeTypeOf('function');
-    controller.back();
-
-    expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
-    expect(host.elements.some((element) => (
-      typeof element.markup === 'string' && element.markup.includes('Back to LAMPA')
-    ))).toBe(false);
+    // ActivitySlide owns the native content controller and header back action.
+    // The catalog component must not replace it.
+    expect(host.Lampa.Controller.add).not.toHaveBeenCalled();
   });
 
 
