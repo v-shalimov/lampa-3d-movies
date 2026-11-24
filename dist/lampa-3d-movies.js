@@ -289,32 +289,29 @@
       this.render = function render() {
         return scroll.render();
       };
-      const restoreHeaderBack = () => {
-        const backButton = $(".head__backward");
-        if (!backButton.length) return;
-        backButton.off("click");
-        backButton.on("click", Lampa.Controller.back.bind(Lampa.Controller));
+      let patchedContentController = null;
+      let originalContentBack = null;
+      const restoreContentBack = () => {
+        if (!patchedContentController) return;
+        patchedContentController.back = originalContentBack;
+        patchedContentController = null;
+        originalContentBack = null;
       };
       this.start = function start() {
-        const backButton = $(".head__backward");
-        if (!backButton.length) return;
-        backButton.off("click");
-        backButton.on("click", (event) => {
-          const controllerName = Lampa.Controller.enabled().name;
-          if (["content", "head", "menu"].includes(controllerName)) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            Lampa.Activity.backward();
-          } else {
-            Lampa.Controller.back();
-          }
-        });
+        const enabled = Lampa.Controller.enabled();
+        if ((enabled == null ? void 0 : enabled.name) !== "content" || !enabled.controller) return;
+        const controller = enabled.controller;
+        if (controller === patchedContentController) return;
+        restoreContentBack();
+        patchedContentController = controller;
+        originalContentBack = controller.back;
+        controller.back = () => Lampa.Activity.backward();
       };
       this.stop = function stop() {
-        restoreHeaderBack();
+        restoreContentBack();
       };
       this.destroy = function destroy() {
-        restoreHeaderBack();
+        restoreContentBack();
         disposed = true;
         searchSequence += 1;
         if (activeController) activeController.abort();
