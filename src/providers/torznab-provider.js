@@ -17,7 +17,7 @@ const xmlParser = new XMLParser({
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new TypeError(\`Torznab \${fieldName} must be a non-empty string\`);
+    throw new TypeError(`Torznab ${fieldName} must be a non-empty string`);
   }
 
   return value.trim();
@@ -187,7 +187,7 @@ export class TorznabProvider {
 
     if (!response || response.ok !== true) {
       const status = response?.status ?? 'unknown';
-      throw new Error(\`Torznab request failed with HTTP \${status}\`);
+      throw new Error(`Torznab request failed with HTTP ${status}`);
     }
 
     return parseFeed(await response.text(), this.id);
