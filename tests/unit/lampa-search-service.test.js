@@ -36,7 +36,6 @@ describe('createLampaSearchService', () => {
         prowlarr_key: 'prowlarr-key-one',
         prowlarr_url_two: 'http://prowlarr-two.local',
         prowlarr_key_two: 'prowlarr-key-two',
-        parser_torrent_type: 'jackett',
         lampa_3d_torznab_url: 'https://indexer.example/api',
         lampa_3d_torznab_api_key: 'torznab-key',
       }),
@@ -49,6 +48,23 @@ describe('createLampaSearchService', () => {
     expect(registry.has('prowlarr-primary')).toBe(false);
     expect(registry.has('prowlarr-secondary')).toBe(false);
     expect(registry.has('torznab-custom')).toBe(true);
+  });
+
+  it('uses Prowlarr when that is the active parser in LAMPA settings', () => {
+    const { registry } = createLampaSearchService({
+      readSetting: makeReadSetting({
+        parser_torrent_type: 'prowlarr',
+        prowlarr_url: 'prowlarr.local:9696',
+        prowlarr_key: 'prowlarr-key',
+        jackett_url: 'http://jackett.local:9117',
+        jackett_key: 'jackett-key',
+      }),
+      fetchImpl: vi.fn(),
+    });
+
+    expect(registry.size).toBe(1);
+    expect(registry.has('prowlarr-primary')).toBe(true);
+    expect(registry.has('jackett-primary')).toBe(false);
   });
 
   it('uses a configured Jackett URL even when the API key field is blank, like LAMPA does', () => {
