@@ -24,7 +24,7 @@ function registerMenuItem(Lampa, $) {
   $('.menu .menu__list').eq(0).append(button);
 }
 
-function registerStyles(Lampa) {
+function registerStyles(Lampa, $) {
   Lampa.Template.add('lampa_3d_movies_style', `
     <style>
       .lampa-3d-movies__scroll { padding: 1.5em; }
@@ -71,7 +71,7 @@ export function initializeLampa3DMovies(Lampa, $) {
     Lampa.Component.add(COMPONENT_ID, Activity);
   }
 
-  registerStyles(Lampa);
+  registerStyles(Lampa, $);
   registerMenuItem(Lampa, $);
 }
 
