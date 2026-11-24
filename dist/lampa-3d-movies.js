@@ -179,6 +179,7 @@
     return function Lampa3DMoviesActivity(activityParams = {}) {
       const scroll = new Lampa.Scroll({ mask: true, over: true });
       const root = $('<div class="lampa-3d-movies"></div>');
+      const backButton = $('<div class="lampa-3d-movies__back selector">\u2190 Back to LAMPA</div>');
       const searchButton = $(`
       <div class="lampa-3d-movies__search selector">
         <div class="lampa-3d-movies__search-title">Search 3D movies</div>
@@ -192,8 +193,17 @@
       let allReleases = [];
       let activeTracker = "all";
       scroll.body().addClass("lampa-3d-movies__scroll");
+      root.append(backButton);
       root.append(searchButton);
       scroll.append(root);
+      backButton.on("hover:enter", () => {
+        if (activeController) activeController.abort();
+        if (Lampa.Activity && typeof Lampa.Activity.backward === "function") {
+          Lampa.Activity.backward();
+        } else {
+          Lampa.Controller.toggle("content");
+        }
+      });
       const updateSearchLabel = () => {
         searchButton.find(".lampa-3d-movies__search-query").text(lastQuery || "Select to enter a movie title");
       };
@@ -5529,6 +5539,13 @@
     Lampa.Template.add("lampa_3d_movies_style", `
     <style>
       .lampa-3d-movies__scroll { padding: 1.5em; }
+      .lampa-3d-movies__back {
+        display: inline-block;
+        padding: .65em 1em;
+        margin-bottom: .8em;
+        border-radius: .35em;
+        background: rgba(255,255,255,.1);
+      }
       .lampa-3d-movies__search,
       .lampa-3d-movies__result {
         padding: 1em;
