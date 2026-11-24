@@ -12,8 +12,8 @@ function validateProvider(provider) {
   }
 
   return Object.freeze({
-    ...provider,
     id: provider.id.trim(),
+    search: provider.search.bind(provider),
   });
 }
 
