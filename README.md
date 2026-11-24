@@ -73,6 +73,12 @@ from the enclosure or link. It intentionally does not assume a particular
 indexer vendor's endpoint URL; configure the exact Torznab API endpoint
 provided by that service.
 
+### Prowlarr
+
+The Prowlarr adapter uses the same JSON endpoint as LAMPA's built-in parser:
+`/api/v1/search?apikey=...&query=...`. It filters to torrent protocol results,
+then retains only 3D releases with a usable `downloadUrl`. The LAMPA plugin
+automatically reuses `prowlarr_url`, `prowlarr_key`, and their `_two` variants.
 
 ## Runtime provider registry
 
