@@ -191,6 +191,7 @@
       let lastQuery = typeof activityParams.search === "string" ? activityParams.search : "";
       let allReleases = [];
       let activeTracker = "all";
+      scroll.minus();
       scroll.body().addClass("lampa-3d-movies__scroll");
       const scrollNode = scroll.render() && scroll.render()[0];
       const handleMacWheel = (event) => {
@@ -321,6 +322,17 @@
         return scroll.render();
       };
       this.start = function start() {
+        Lampa.Controller.add("content", {
+          toggle: () => {
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(false, scroll.render());
+          },
+          back: () => {
+            if (activeController) activeController.abort();
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle("content");
       };
       this.stop = function stop() {
       };
