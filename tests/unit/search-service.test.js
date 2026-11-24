@@ -34,6 +34,29 @@ describe('SearchService', () => {
     });
   });
 
+  it('runs when the WebView does not provide a native AbortController', async () => {
+    vi.stubGlobal('AbortController', undefined);
+    let providerSignal;
+    const service = new SearchService([{
+      id: 'legacy-webview',
+      search: async (_query, { signal }) => {
+        providerSignal = signal;
+        return [];
+      },
+    }]);
+
+    try {
+      const result = await service.search('Avatar');
+
+      expect(result).toEqual({ releases: [], errors: [] });
+      expect(providerSignal.aborted).toBe(false);
+      expect(typeof providerSignal.addEventListener).toBe('function');
+      expect(typeof providerSignal.removeEventListener).toBe('function');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('keeps successful results when one provider fails', async () => {
     const service = new SearchService([
       { id: 'working', search: vi.fn().mockResolvedValue([release('working', '1')]) },
