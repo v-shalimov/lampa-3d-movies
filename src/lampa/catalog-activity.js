@@ -113,13 +113,16 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     scroll.body().addClass('lampa-3d-movies__scroll');
     const scrollNode = scroll.render() && scroll.render()[0];
     const handleMacWheel = (event) => {
-      if (!event.deltaY) return;
+      if (!scrollNode || !scrollNode.contains(event.target) || !event.deltaY) return;
       event.preventDefault();
-      event.stopImmediatePropagation();
-      scroll.wheel(Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 600));
+      event.stopPropagation();
+      const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? scrollNode.clientHeight : 1;
+      scroll.wheel(Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY * multiplier), 600));
     };
-    if (scrollNode && typeof scrollNode.addEventListener === 'function') {
-      scrollNode.addEventListener('wheel', handleMacWheel, { capture: true, passive: false });
+    // Capture at document level: trackpads dispatch WheelEvents with deltaY,
+    // while LAMPA's legacy Scroll handler only understands wheelDelta.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('wheel', handleMacWheel, { capture: true, passive: false });
     }
     root.append(searchButton);
     scroll.append(root);
@@ -159,7 +162,6 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
           filter.on('hover:enter', () => { activeTracker = id; renderReleaseItems(); scroll.update(filter); });
           filters.append(filter);
         };
-        addFilter('all', 'All sources', releases.length);
         trackers.forEach((tracker) => addFilter(tracker, tracker, releases.filter((release) => release.tracker === tracker).length));
         root.append(filters);
       }
@@ -252,15 +254,8 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    this.start = function start() {
-      Lampa.Controller.add('content', {
-        back: () => {
-          if (activeController) activeController.abort();
-          Lampa.Activity.backward();
-        },
-      });
-      Lampa.Controller.toggle('content');
-    };
+    // ActivitySlide already registers LAMPA's native content controller,
+    // including its header-arrow/back handler. Do not replace that controller.
 
     this.stop = function stop() {};
 
@@ -268,9 +263,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
-      if (scrollNode && typeof scrollNode.removeEventListener === 'function') {
-        scrollNode.removeEventListener('wheel', handleMacWheel, true);
-      }
+      if (typeof document !== 'undefined') document.removeEventListener('wheel', handleMacWheel, true);
       scroll.destroy();
       root.remove();
     };
