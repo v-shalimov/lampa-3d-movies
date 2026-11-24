@@ -125,9 +125,10 @@ The output is dist/lampa-3d-movies.js. Install that generated file in LAMPA
 using the normal plugin URL/file mechanism.
 
 The plugin registers a dedicated **3D Movies** menu item and Activity. It
-reuses LAMPA's existing Jackett settings (jackett_url, jackett_key,
-jackett_url_two, jackett_key_two) and adds optional Torznab endpoint/key
-fields under the **3D Movies** settings section. Credentials remain in the
+reuses LAMPA's existing Jackett and Prowlarr settings (including both configured
+endpoints) and adds optional Torznab endpoint/key fields under the **3D Movies**
+settings section. The Prowlarr adapter uses the same /api/v1/search endpoint and
+torrent-result filtering as LAMPA's built-in parser. Credentials remain in the
 local LAMPA settings store; do not commit them to this repository.
 
 Search results are displayed with their detected stereoscopic layout. Selecting
