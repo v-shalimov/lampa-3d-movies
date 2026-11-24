@@ -25,6 +25,9 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
   }
 
   const providers = [];
+  const jackettIndexer = readString(readSetting, 'jackett_interview') === 'healthy'
+    ? 'status:healthy'
+    : 'all';
   const jackettPairs = [
     { urlKey: 'jackett_url', apiKeyKey: 'jackett_key', id: 'jackett-primary' },
     { urlKey: 'jackett_url_two', apiKeyKey: 'jackett_key_two', id: 'jackett-secondary' },
@@ -39,6 +42,7 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
         id: pair.id,
         baseUrl,
         apiKey,
+        indexer: jackettIndexer,
         fetchImpl,
       }));
     }
