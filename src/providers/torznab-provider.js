@@ -89,6 +89,8 @@ function mapItem(item, providerId) {
 
   const magnet = [magnetUrl, enclosureUrl, link]
     .find((value) => typeof value === 'string' && value.startsWith('magnet:')) ?? null;
+  if (!magnet && !link) return null;
+
   const size = getTorznabAttribute(item, 'size') ?? enclosure['@_length'];
 
   return createRelease({
