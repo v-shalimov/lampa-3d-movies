@@ -99,7 +99,7 @@ function mapItem(item, providerId) {
     resolution: detectResolution(title),
     sizeBytes: optionalNonNegativeInteger(size),
     seeders: optionalNonNegativeInteger(getTorznabAttribute(item, 'seeders')),
-    url: magnet || link || guid || null,
+    url: magnet || link || null,
   });
 }
 
