@@ -32,11 +32,10 @@ function extractText(xml, tagName) {
     return null;
   }
 
-  const raw = match[1]
-    .replace(/^\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*$/, '$1')
-    .trim();
+  const content = match[1].trim();
+  const cdata = content.match(/^<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>$/);
 
-  return decodeXml(raw);
+  return cdata ? cdata[1] : decodeXml(content);
 }
 
 function extractAttribute(xml, tagName, attributeName) {
