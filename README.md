@@ -78,7 +78,7 @@ provided by that service.
 
 Create provider instances with unique, stable IDs and register them once at
 application startup. The registry does not persist API keys or endpoint
-configuration; keep those in the host application's secure settings.
+configuration; keep those in the host application's local settings.
 
 ```js
 import { ProviderRegistry } from './src/services/provider-registry.js';
@@ -111,6 +111,32 @@ Search aggregation deduplicates matching 40-character hexadecimal torrent
 info hashes across providers. Other provider-local release IDs remain scoped
 to their provider to avoid incorrectly merging unrelated results.
 
+## LAMPA integration
+
+The plugin entry point is src/lampa/entry.js. Build it into one browser-ready
+IIFE script:
+
+```sh
+npm install
+npm run build
+```
+
+The output is dist/lampa-3d-movies.js. Install that generated file in LAMPA
+using the normal plugin URL/file mechanism.
+
+The plugin registers a dedicated **3D Movies** menu item and Activity. It
+reuses LAMPA's existing Jackett settings (jackett_url, jackett_key,
+jackett_url_two, jackett_key_two) and adds optional Torznab endpoint/key
+fields under the **3D Movies** settings section. Credentials remain in the
+local LAMPA settings store; do not commit them to this repository.
+
+Search results are displayed with their detected stereoscopic layout. Selecting
+a release delegates playback to Lampa.Torrent.start(); the plugin does not
+implement TorrServer requests or a media player.
+
+See [the integration contract](docs/lampa-integration-design.md) for the
+host API research, adapter boundaries, and remaining runtime verification.
+
 ## Development
 
 Requirements: Node.js 20 or newer.
@@ -118,6 +144,7 @@ Requirements: Node.js 20 or newer.
 ```sh
 npm install
 npm test
+npm run build
 ```
 
 ## Development workflow
