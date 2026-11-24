@@ -3,7 +3,7 @@ import { createRelease } from '../domain/release.js';
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new TypeError(\`Torznab \${fieldName} must be a non-empty string\`);
+    throw new TypeError(`Torznab ${fieldName} must be a non-empty string`);
   }
 
   return value.trim();
@@ -22,7 +22,7 @@ function decodeXml(value) {
 
 function extractText(xml, tagName) {
   const expression = new RegExp(
-    \`<(?:[\\w.-]+:)?\${tagName}\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?\${tagName}\\s*>\`,
+    `<(?:[\\w.-]+:)?${tagName}\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${tagName}\\s*>`,
     'i',
   );
   const match = xml.match(expression);
@@ -39,7 +39,7 @@ function extractText(xml, tagName) {
 
 function extractAttribute(xml, tagName, attributeName) {
   const tag = new RegExp(
-    \`<(?:[\\w.-]+:)?\${tagName}\\b([^>]*)/?>\`,
+    `<(?:[\\w.-]+:)?${tagName}\\b([^>]*)/?>`,
     'i',
   ).exec(xml);
 
@@ -48,7 +48,7 @@ function extractAttribute(xml, tagName, attributeName) {
   }
 
   const attribute = new RegExp(
-    \`(?:^|\\s)\${attributeName}\\s*=\\s*(["'])([\\s\\S]*?)\\1\`,
+    `(?:^|\\s)${attributeName}\\s*=\\s*(["'])([\\s\\S]*?)\\1`,
     'i',
   ).exec(tag[1]);
 
@@ -204,7 +204,7 @@ export class TorznabProvider {
 
     if (!response || response.ok !== true) {
       const status = response?.status ?? 'unknown';
-      throw new Error(\`Torznab request failed with HTTP \${status}\`);
+      throw new Error(`Torznab request failed with HTTP ${status}`);
     }
 
     return parseFeed(await response.text(), this.id);
