@@ -30,15 +30,21 @@ describe('createLampaSearchService', () => {
         jackett_key: 'key-one',
         jackett_url_two: 'http://jackett-two.local',
         jackett_key_two: 'key-two',
+        prowlarr_url: 'http://prowlarr-one.local',
+        prowlarr_key: 'prowlarr-key-one',
+        prowlarr_url_two: 'http://prowlarr-two.local',
+        prowlarr_key_two: 'prowlarr-key-two',
         lampa_3d_torznab_url: 'https://indexer.example/api',
         lampa_3d_torznab_api_key: 'torznab-key',
       }),
       fetchImpl: vi.fn(),
     });
 
-    expect(registry.size).toBe(3);
+    expect(registry.size).toBe(5);
     expect(registry.has('jackett-primary')).toBe(true);
     expect(registry.has('jackett-secondary')).toBe(true);
+    expect(registry.has('prowlarr-primary')).toBe(true);
+    expect(registry.has('prowlarr-secondary')).toBe(true);
     expect(registry.has('torznab-custom')).toBe(true);
   });
 
