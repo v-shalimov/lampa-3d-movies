@@ -28,6 +28,13 @@ function registerStyles(Lampa, $) {
   Lampa.Template.add('lampa_3d_movies_style', `
     <style>
       .lampa-3d-movies__scroll { padding: 1.5em; }
+      .lampa-3d-movies__back {
+        display: inline-block;
+        padding: .65em 1em;
+        margin-bottom: .8em;
+        border-radius: .35em;
+        background: rgba(255,255,255,.1);
+      }
       .lampa-3d-movies__search,
       .lampa-3d-movies__result {
         padding: 1em;
