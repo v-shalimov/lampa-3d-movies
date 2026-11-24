@@ -24,3 +24,6 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Build LAMPA plugin
+        run: npm run build
