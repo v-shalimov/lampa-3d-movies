@@ -68,7 +68,7 @@ const release = {
 };
 
 describe('createLampaCatalogActivity', () => {
-  it('does not override the native LAMPA content controller', () => {
+  it('leaves LAMPA native back navigation to ActivitySlide', () => {
     const host = makeHost();
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
@@ -77,16 +77,11 @@ describe('createLampaCatalogActivity', () => {
     const activity = new Activity({});
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
-    expect(activity.start).toBeTypeOf('function');
     activity.create();
-    activity.start();
 
     expect(host.scroll.minus).toHaveBeenCalledOnce();
-    const controller = host.Lampa.Controller.add.mock.calls.at(-1)[1];
-    expect(controller.back).toBeTypeOf('function');
-    controller.back();
-    expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
-    expect(host.Lampa.Controller.toggle).toHaveBeenCalledWith('content');
+    expect(activity.start).toBeUndefined();
+    expect(host.Lampa.Controller.add).not.toHaveBeenCalled();
   });
 
 
