@@ -157,6 +157,10 @@ npm test
 npm run build
 ```
 
+## Build verification
+
+This branch exists to run the automated build and publish the installable bundle.
+
 ## Development workflow
 
 The project follows TDD:
