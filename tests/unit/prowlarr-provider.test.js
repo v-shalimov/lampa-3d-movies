@@ -53,6 +53,7 @@ describe('ProwlarrProvider', () => {
       'http://prowlarr.local:9696/api/v1/search?apikey=secret-key&query=Dune%20Part%20Two',
       expect.objectContaining({ method: 'GET', signal: undefined }),
     );
+    expect(new URL(fetchImpl.mock.calls[0][0]).searchParams.has('type')).toBe(false);
     expect(releases).toHaveLength(1);
     expect(releases[0]).toMatchObject({
       providerId: 'prowlarr-primary',
