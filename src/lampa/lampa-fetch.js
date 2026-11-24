@@ -60,8 +60,9 @@ export function createLampaFetch(RequestConstructor) {
       const onAbort = () => {
         if (settled) return;
 
-        // Settle before clear(): the request wrapper may synchronously invoke
-        // its error callback while cancelling the underlying XHR.
+        // Reguest.clear() suppresses this request's callbacks. Its public API does
+        // not expose the underlying XHR abort handle, so transport cancellation
+        // is not guaranteed; the caller stops waiting and ignores late results.
         settle(reject, createAbortError());
         request.clear();
       };
