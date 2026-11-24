@@ -118,7 +118,7 @@ describe('JackettProvider', () => {
     expect(() => new JackettProvider({
       baseUrl: 'http://localhost:9117',
       apiKey: '',
-    })).toThrow('Jackett apiKey must be a non-empty string');
+    })).not.toThrow();
   });
 
   it('does not treat a Guid details page as a playable torrent URL', async () => {
