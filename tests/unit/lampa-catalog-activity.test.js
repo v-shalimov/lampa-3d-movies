@@ -35,6 +35,7 @@ function makeHost() {
     append: vi.fn(),
     render: () => new FakeElement('scroll-root'),
     destroy: vi.fn(),
+    minus: vi.fn(),
   };
 
   const Lampa = {
@@ -44,6 +45,8 @@ function makeHost() {
       enabled: () => ({ name: 'content' }),
       toggle: vi.fn(),
       add: vi.fn(),
+      collectionSet: vi.fn(),
+      collectionFocus: vi.fn(),
     },
     Torrent: { start: vi.fn(), back: vi.fn() },
     Activity: { backward: vi.fn() },
@@ -76,10 +79,14 @@ describe('createLampaCatalogActivity', () => {
 
     expect(activity.start).toBeTypeOf('function');
     activity.create();
+    activity.start();
 
-    // ActivitySlide owns the native content controller and header back action.
-    // The catalog component must not replace it.
-    expect(host.Lampa.Controller.add).not.toHaveBeenCalled();
+    expect(host.scroll.minus).toHaveBeenCalledOnce();
+    const controller = host.Lampa.Controller.add.mock.calls.at(-1)[1];
+    expect(controller.back).toBeTypeOf('function');
+    controller.back();
+    expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
+    expect(host.Lampa.Controller.toggle).toHaveBeenCalledWith('content');
   });
 
 
