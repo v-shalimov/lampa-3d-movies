@@ -1,19 +1,31 @@
 const FORMAT_PATTERNS = [
   {
     format: 'HALF_SBS',
-    pattern: /(?:^|[^a-z0-9])half[\s._-]*sbs(?=$|[^a-z0-9])/i,
+    patterns: [
+      /(?:^|[^a-z0-9])half[\s._-]*sbs(?=$|[^a-z0-9])/i,
+      /(?:^|[^a-z0-9])hsbs(?=$|[^a-z0-9])/i,
+    ],
   },
   {
     format: 'FULL_SBS',
-    pattern: /(?:^|[^a-z0-9])full[\s._-]*sbs(?=$|[^a-z0-9])/i,
+    patterns: [
+      /(?:^|[^a-z0-9])full[\s._-]*sbs(?=$|[^a-z0-9])/i,
+      /(?:^|[^a-z0-9])fsbs(?=$|[^a-z0-9])/i,
+    ],
   },
   {
     format: 'HALF_OU',
-    pattern: /(?:^|[^a-z0-9])half[\s._-]*ou(?=$|[^a-z0-9])/i,
+    patterns: [
+      /(?:^|[^a-z0-9])half[\s._-]*ou(?=$|[^a-z0-9])/i,
+      /(?:^|[^a-z0-9])hou(?=$|[^a-z0-9])/i,
+    ],
   },
   {
     format: 'FULL_OU',
-    pattern: /(?:^|[^a-z0-9])full[\s._-]*ou(?=$|[^a-z0-9])/i,
+    patterns: [
+      /(?:^|[^a-z0-9])full[\s._-]*ou(?=$|[^a-z0-9])/i,
+      /(?:^|[^a-z0-9])fou(?=$|[^a-z0-9])/i,
+    ],
   },
 ];
 
@@ -34,9 +46,9 @@ const UNKNOWN_3D = Object.freeze({
 /**
  * Detects a stereoscopic 3D layout from a release filename or title.
  *
- * A recognized layout marker is sufficient to classify a release as 3D.
- * An explicit "3D" marker without a recognized layout is classified as
- * 3D with an unknown layout.
+ * A recognized stereo-layout marker is sufficient to classify a release
+ * as 3D, even when the filename omits the explicit "3D" token. An explicit
+ * "3D" marker without a recognized layout is classified as UNKNOWN.
  *
  * @param {string} releaseName
  * @returns {{ is3D: boolean, format: string | null, confidence: number }}
@@ -47,7 +59,7 @@ export function detect3DFormat(releaseName) {
   }
 
   const matches = FORMAT_PATTERNS
-    .filter(({ pattern }) => pattern.test(releaseName))
+    .filter(({ patterns }) => patterns.some((pattern) => pattern.test(releaseName)))
     .map(({ format }) => format);
 
   const uniqueFormats = [...new Set(matches)];
