@@ -101,6 +101,8 @@ function mapItem(item, providerId) {
     format: detection.format,
     resolution: detectResolution(title),
     ...parseReleaseMetadata(title, getText(item.description)),
+    tracker: getTorznabAttribute(item, 'jackettindexer') || getTorznabAttribute(item, 'indexer'),
+    trackerId: getTorznabAttribute(item, 'trackerid'),
     sizeBytes: optionalNonNegativeInteger(size),
     seeders: optionalNonNegativeInteger(getTorznabAttribute(item, 'seeders')),
     url: magnet || link || null,
