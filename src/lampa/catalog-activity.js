@@ -17,7 +17,7 @@ function formatSize(sizeBytes) {
   return `${size.toFixed(digits)} ${units[unit]}`;
 }
 
-function createResultElement($, release, Lampa) {
+function createResultElement($, release, Lampa, scroll) {
   const item = $(`
     <div class="lampa-3d-movies__result selector">
       <div class="lampa-3d-movies__result-title"></div>
@@ -52,10 +52,7 @@ function createResultElement($, release, Lampa) {
   item.find('.lampa-3d-movies__result-title').text(release.title);
   item.find('.lampa-3d-movies__result-meta').text([meta, technical.join(' · ')].filter(Boolean).join('  |  '));
 
-  item.on('hover:focus', () => {
-    const scroll = item.closest('.scroll');
-    if (scroll && scroll[0]?.Scroll) scroll[0].Scroll.update(item);
-  });
+  item.on('hover:focus', () => scroll.update(item));
 
   item.on('hover:enter', () => {
     const torrent = Lampa.Torrent;
@@ -138,7 +135,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       }
 
       releases.forEach((release) => {
-        const item = createResultElement($, release, Lampa);
+        const item = createResultElement($, release, Lampa, scroll);
         root.append(item);
       });
     };
