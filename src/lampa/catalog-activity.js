@@ -145,7 +145,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       }
 
       if (!configured.registry || configured.registry.size === 0) {
-        showMessage('Configure Jackett in LAMPA settings or add a Torznab endpoint in 3D Movies settings');
+        showMessage('Configure Jackett or Prowlarr in LAMPA settings, or add a Torznab endpoint in 3D Movies settings');
         return;
       }
 
