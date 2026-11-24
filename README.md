@@ -54,6 +54,7 @@ root):
 
 ```js
 import { TorznabProvider } from './src/providers/torznab-provider.js';
+import { SearchService } from './src/services/search-service.js';
 
 const torznab = new TorznabProvider({
   baseUrl: 'https://indexer.example/api',
