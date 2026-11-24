@@ -6,10 +6,12 @@
   "description": "A 3D movie discovery extension for LAMPA",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build": "esbuild src/lampa/entry.js --bundle --format=iife --target=es2017 --outfile=dist/lampa-3d-movies.js"
   },
   "devDependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "esbuild": "^0.25.5"
   },
   "engines": {
     "node": ">=20"
