@@ -81,5 +81,11 @@ export function createRelease(input) {
     sizeBytes: optionalNonNegativeInteger(input.sizeBytes, 'sizeBytes'),
     seeders: optionalNonNegativeInteger(input.seeders, 'seeders'),
     url: optionalString(input.url, 'url'),
+    videoCodec: optionalString(input.videoCodec, 'videoCodec'),
+    audioCodec: optionalString(input.audioCodec, 'audioCodec'),
+    audioLanguages: Object.freeze(Array.isArray(input.audioLanguages) ? input.audioLanguages.filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim()) : []),
+    bitrateMbps: input.bitrateMbps == null ? null : (Number.isFinite(input.bitrateMbps) && input.bitrateMbps > 0 ? input.bitrateMbps : null),
+    source: optionalString(input.source, 'source'),
+    hdr: optionalString(input.hdr, 'hdr'),
   });
 }
