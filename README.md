@@ -128,7 +128,10 @@ npm run build
 ```
 
 The output is dist/lampa-3d-movies.js. Install that generated file in LAMPA
-using the normal plugin URL/file mechanism.
+using the normal plugin URL/file mechanism. Every push to `main` and every pull
+request targeting `main` also runs tests and builds the plugin; the workflow
+publishes the bundle as the `lampa-3d-movies` artifact. The workflow can also
+be started manually from the repository's Actions tab.
 
 The plugin registers a dedicated **3D Movies** menu item and Activity. It
 reuses LAMPA's existing Jackett and Prowlarr settings (including both configured
