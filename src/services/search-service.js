@@ -113,8 +113,8 @@ export class SearchService {
     }
 
     this.providers = providers.map((provider) => ({
-      ...provider,
       id: provider.id.trim(),
+      search: provider.search.bind(provider),
     }));
     this.timeoutMs = timeoutMs;
   }
