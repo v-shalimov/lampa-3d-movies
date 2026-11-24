@@ -75,21 +75,21 @@ export class ProwlarrProvider {
       throw new TypeError('Prowlarr response must be an array');
     }
 
-    return payload.flatMap((item) => {
-      if (!item || typeof item !== 'object' || item.protocol !== 'torrent') return [];
+    return payload.reduce((releases, item) => {
+      if (!item || typeof item !== 'object' || item.protocol !== 'torrent') return releases;
 
       const title = typeof item.title === 'string' ? item.title.trim() : '';
       const downloadUrl = typeof item.downloadUrl === 'string' ? item.downloadUrl.trim() : '';
-      if (!title || !downloadUrl) return [];
+      if (!title || !downloadUrl) return releases;
 
       const detection = detect3DFormat(title);
-      if (!detection.is3D) return [];
+      if (!detection.is3D) return releases;
 
       const providerReleaseId = (
         typeof item.guid === 'string' && item.guid.trim()
       ) || downloadUrl;
 
-      return [createRelease({
+      releases.push(createRelease({
         providerId: this.id,
         providerReleaseId,
         title,
@@ -98,7 +98,9 @@ export class ProwlarrProvider {
         sizeBytes: optionalNonNegativeInteger(item.size),
         seeders: optionalNonNegativeInteger(item.seeders),
         url: downloadUrl,
-      })];
-    });
+      }));
+
+      return releases;
+    }, []);
   }
 }
