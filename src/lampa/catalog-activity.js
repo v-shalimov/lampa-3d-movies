@@ -254,8 +254,9 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // ActivitySlide already registers LAMPA's native content controller,
-    // including its header-arrow/back handler. Do not replace that controller.
+    // ActivitySlide requires every component to expose start(). Keep this hook
+    // intentionally empty: the native ActivitySlide owns header/back navigation.
+    this.start = function start() {};
 
     this.stop = function stop() {};
 
