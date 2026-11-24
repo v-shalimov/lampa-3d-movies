@@ -37,9 +37,9 @@ function selectedLinks(readSetting, type) {
     }))
     .filter((pair) => pair.baseUrl);
 
+  if (use === 'one') return available.filter((pair) => pair.id.endsWith('primary'));
   if (use === 'two') return available.filter((pair) => pair.id.endsWith('secondary'));
-  if (use === 'all') return available;
-  return available.filter((pair) => pair.id.endsWith('primary'));
+  return available;
 }
 
 /**
