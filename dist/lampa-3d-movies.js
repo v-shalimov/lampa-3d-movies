@@ -320,6 +320,8 @@
       this.render = function render() {
         return scroll.render();
       };
+      this.start = function start() {
+      };
       this.stop = function stop() {
       };
       this.destroy = function destroy() {
