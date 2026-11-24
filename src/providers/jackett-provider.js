@@ -59,6 +59,8 @@ function mapResult(item, providerId) {
     format: detection.format,
     resolution: detectResolution(title),
     ...parseReleaseMetadata(title, item.Description),
+    tracker: typeof item.Tracker === 'string' ? item.Tracker : null,
+    trackerId: typeof item.TrackerId === 'string' ? item.TrackerId : null,
     sizeBytes: optionalNonNegativeInteger(item.Size),
     seeders: optionalNonNegativeInteger(item.Seeders),
     url: magnetUri || link,
