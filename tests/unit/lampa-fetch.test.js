@@ -6,6 +6,7 @@ describe('createLampaFetch', () => {
     const native = vi.fn((url, success) => success('<rss/>'));
     const Request = vi.fn(function Request() {
       this.native = native;
+      this.timeout = vi.fn();
       this.clear = vi.fn();
     });
 
