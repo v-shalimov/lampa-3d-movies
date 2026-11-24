@@ -74,6 +74,7 @@ describe('createLampaCatalogActivity', () => {
     const activity = new Activity({});
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
+    expect(activity.start).toBeTypeOf('function');
     activity.create();
 
     // ActivitySlide owns the native content controller and header back action.
