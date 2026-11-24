@@ -88,7 +88,7 @@ describe('TorznabProvider', () => {
 
   it('decodes XML entities and CDATA in titles', async () => {
     const xml = `<rss><channel><item>
-      <title><![CDATA[Film &amp; Film 3D HSBS 1080p]]></title>
+      <title><![CDATA[Film & Film 3D HSBS 1080p]]></title>
       <guid>urn:release:one</guid>
     </item></channel></rss>`;
     const provider = createProvider(
