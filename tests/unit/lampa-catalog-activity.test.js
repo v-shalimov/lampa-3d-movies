@@ -44,7 +44,7 @@ function makeHost() {
       enabled: () => ({ name: 'content' }),
       toggle: vi.fn(),
     },
-    Torrent: { start: vi.fn() },
+    Torrent: { start: vi.fn(), back: vi.fn() },
     Noty: { show: vi.fn() },
   };
 
@@ -96,6 +96,7 @@ describe('createLampaCatalogActivity', () => {
     expect(resultElement).toBeDefined();
     resultElement.trigger('hover:enter');
 
+    expect(host.Lampa.Torrent.back).toHaveBeenCalledWith(expect.any(Function));
     expect(host.Lampa.Torrent.start).toHaveBeenCalledWith({
       title: release.title,
       Title: release.title,
