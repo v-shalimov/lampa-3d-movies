@@ -1,3 +1,5 @@
+import { mapReleaseToLampaTorrent } from './release-mapper.js';
+
 function formatSize(sizeBytes) {
   if (!Number.isSafeInteger(sizeBytes) || sizeBytes < 0) return '';
 
@@ -39,10 +41,15 @@ function createResultElement($, release, Lampa) {
       return;
     }
 
-    torrent.start(
-      release.__lampaTorrent,
-      { title: release.title },
-    );
+    let mapped;
+    try {
+      mapped = mapReleaseToLampaTorrent(release);
+    } catch (error) {
+      Lampa.Noty.show(error.message || 'Release cannot be played', { style: 'error' });
+      return;
+    }
+
+    torrent.start(mapped, { title: release.title });
   });
 
   return item;
