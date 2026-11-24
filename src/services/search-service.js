@@ -1,4 +1,5 @@
 import { createRelease } from '../domain/release.js';
+import { createAbortController } from '../utils/abort-controller.js';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -141,7 +142,7 @@ export class SearchService {
       throw createAbortError();
     }
 
-    const controllers = this.providers.map(() => new AbortController());
+    const controllers = this.providers.map(() => createAbortController());
     let abortListener;
 
     const abortPromise = signal
