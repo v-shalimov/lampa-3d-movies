@@ -39,7 +39,6 @@ describe('TorznabProvider', () => {
     expect(releases.map(({ format }) => format)).toEqual([
       'HALF_SBS',
       'FULL_OU',
-      'FULL_OU',
     ]);
     expect(releases[0]).toMatchObject({
       providerId: 'torznab',
