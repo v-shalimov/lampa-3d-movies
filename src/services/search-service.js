@@ -147,8 +147,8 @@ export class SearchService {
     const abortPromise = signal
       ? new Promise((_, reject) => {
         abortListener = () => {
-          controllers.forEach((controller) => controller.abort());
           reject(createAbortError());
+          controllers.forEach((controller) => controller.abort());
         };
         signal.addEventListener('abort', abortListener, { once: true });
       })
