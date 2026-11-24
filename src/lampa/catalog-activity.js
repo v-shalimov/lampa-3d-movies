@@ -121,7 +121,9 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     };
     // Capture at document level: trackpads dispatch WheelEvents with deltaY,
     // while LAMPA's legacy Scroll handler only understands wheelDelta.
-    document.addEventListener('wheel', handleMacWheel, { capture: true, passive: false });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('wheel', handleMacWheel, { capture: true, passive: false });
+    }
     root.append(searchButton);
     scroll.append(root);
 
@@ -261,7 +263,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
-      document.removeEventListener('wheel', handleMacWheel, true);
+      if (typeof document !== 'undefined') document.removeEventListener('wheel', handleMacWheel, true);
       scroll.destroy();
       root.remove();
     };
