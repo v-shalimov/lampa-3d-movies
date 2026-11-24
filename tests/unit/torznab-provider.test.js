@@ -86,7 +86,7 @@ describe('TorznabProvider', () => {
     await expect(provider.search('Unknown')).resolves.toEqual([]);
   });
 
-  it('decodes XML entities and CDATA in titles', async () => {
+  it('preserves CDATA text in titles', async () => {
     const xml = `<rss><channel><item>
       <title><![CDATA[Film & Film 3D HSBS 1080p]]></title>
       <guid>urn:release:one</guid>
@@ -146,4 +146,25 @@ describe('TorznabProvider', () => {
     expect(result.releases).toHaveLength(4);
     expect(result.releases.every((release) => release.providerId === 'torznab')).toBe(true);
   });
+  it('decodes XML entities in ordinary element text', async () => {
+    const xml = '<rss><channel><item><title>Film &amp; Film 3D HSBS</title><guid>urn:release:two</guid></item></channel></rss>';
+    const provider = createProvider(
+      vi.fn().mockResolvedValue(createResponse(xml)),
+    );
+
+    const [release] = await provider.search('Film');
+
+    expect(release.title).toBe('Film & Film 3D HSBS');
+  });
+
+  it('rejects an incomplete RSS document', async () => {
+    const provider = createProvider(
+      vi.fn().mockResolvedValue(createResponse('<rss><channel></channel>')),
+    );
+
+    await expect(provider.search('Dune')).rejects.toThrow(
+      'Torznab response must be a valid RSS XML feed',
+    );
+  });
+
 });
