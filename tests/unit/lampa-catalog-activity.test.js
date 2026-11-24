@@ -25,10 +25,13 @@ class FakeElement {
 
 function makeHost() {
   const elements = [];
-  const headerBack = new FakeElement('.head__backward');
-  headerBack.length = 1;
+  const nativeContentController = {
+    back: vi.fn(),
+    toggle: vi.fn(),
+    left: vi.fn(),
+    up: vi.fn(),
+  };
   const $ = (markup) => {
-    if (markup === '.head__backward') return headerBack;
     const element = new FakeElement(markup);
     elements.push(element);
     return element;
@@ -46,7 +49,7 @@ function makeHost() {
     Scroll: vi.fn(() => scroll),
     Input: { edit: vi.fn() },
     Controller: {
-      enabled: vi.fn(() => ({ name: 'content' })),
+      enabled: vi.fn(() => ({ name: 'content', controller: nativeContentController })),
       back: vi.fn(),
       toggle: vi.fn(),
       add: vi.fn(),
@@ -58,7 +61,7 @@ function makeHost() {
     Noty: { show: vi.fn() },
   };
 
-  return { Lampa, $, scroll, elements, headerBack };
+  return { Lampa, $, scroll, elements, nativeContentController };
 }
 
 const release = {
@@ -90,7 +93,7 @@ describe('createLampaCatalogActivity', () => {
   });
 
 
-  it('routes the LAMPA header back arrow directly to Activity.backward', () => {
+  it('routes the active LAMPA content controller back callback to Activity.backward', () => {
     const host = makeHost();
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
@@ -100,21 +103,16 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
-
-    const event = {
-      preventDefault: vi.fn(),
-      stopImmediatePropagation: vi.fn(),
-    };
-    host.headerBack.trigger('click', event);
+    host.nativeContentController.back();
 
     expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
-    expect(host.Lampa.Controller.back).not.toHaveBeenCalled();
-    expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(event.stopImmediatePropagation).toHaveBeenCalledOnce();
+    expect(host.nativeContentController.back).not.toBeUndefined();
   });
 
-  it('keeps Controller.back for modal and overlay navigation', () => {
+  it('does not patch non-content controllers used by overlays', () => {
     const host = makeHost();
+    const overlayController = { back: vi.fn() };
+    host.Lampa.Controller.enabled.mockReturnValue({ name: 'modal', controller: overlayController });
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
       searchService: { search: vi.fn() },
@@ -123,15 +121,15 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
-    host.Lampa.Controller.enabled.mockReturnValue({ name: 'modal' });
-    host.headerBack.trigger('click', { preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() });
+    overlayController.back();
 
-    expect(host.Lampa.Controller.back).toHaveBeenCalledOnce();
+    expect(overlayController.back).toHaveBeenCalledOnce();
     expect(host.Lampa.Activity.backward).not.toHaveBeenCalled();
   });
 
-  it('restores LAMPA native header back handler when activity stops', () => {
+  it('restores the native content back callback when activity stops', () => {
     const host = makeHost();
+    const originalBack = host.nativeContentController.back;
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
       searchService: { search: vi.fn() },
@@ -140,11 +138,10 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
+    expect(host.nativeContentController.back).not.toBe(originalBack);
+
     activity.stop();
-    host.headerBack.trigger('click');
-
-    expect(host.Lampa.Controller.back).toHaveBeenCalledOnce();
-    expect(host.Lampa.Activity.backward).not.toHaveBeenCalled();
+    expect(host.nativeContentController.back).toBe(originalBack);
   });
 
   it('searches configured providers and starts playback through LAMPA', async () => {
