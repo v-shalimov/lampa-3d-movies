@@ -49,6 +49,7 @@ describe('JackettProvider', () => {
       resolution: '1080p',
       sizeBytes: 12_345_678_901,
       seeders: 42,
+      tracker: 'Example Tracker',
       url: 'magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     });
   });

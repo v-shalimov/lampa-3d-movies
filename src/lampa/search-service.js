@@ -104,6 +104,16 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
   return {
     registry,
     searchService: new SearchService(registry.list()),
+    async listSources(options = {}) {
+      const sources = await Promise.all(providers
+        .filter((provider) => typeof provider.listIndexers === 'function')
+        .map((provider) => provider.listIndexers(options)));
+      const unique = new Map();
+      sources.flat().forEach((source) => {
+        if (!unique.has(source.id)) unique.set(source.id, source);
+      });
+      return [...unique.values()];
+    },
   };
 }
 

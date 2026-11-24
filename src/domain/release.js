@@ -87,5 +87,7 @@ export function createRelease(input) {
     bitrateMbps: input.bitrateMbps == null ? null : (Number.isFinite(input.bitrateMbps) && input.bitrateMbps > 0 ? input.bitrateMbps : null),
     source: optionalString(input.source, 'source'),
     hdr: optionalString(input.hdr, 'hdr'),
+    tracker: optionalString(input.tracker, 'tracker'),
+    trackerId: optionalString(input.trackerId, 'trackerId'),
   });
 }

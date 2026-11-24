@@ -40,6 +40,7 @@ function createResultElement($, release, Lampa, scroll) {
     release.bitrateMbps ? `${release.bitrateMbps} Mbps` : '',
     release.source,
     release.hdr,
+    release.tracker ? 'Source: ' + release.tracker : '',
   ].filter(Boolean);
 
   const meta = [
@@ -106,6 +107,8 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     let activeController = null;
     let searchSequence = 0;
     let lastQuery = typeof activityParams.search === 'string' ? activityParams.search : '';
+    let allReleases = [];
+    let activeTracker = 'all';
 
     scroll.body().addClass('lampa-3d-movies__scroll');
     root.append(searchButton);
@@ -117,7 +120,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
     };
 
     const clearResults = () => {
-      root.find('.lampa-3d-movies__result, .lampa-3d-movies__message').remove();
+      root.find('.lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-summary').remove();
     };
 
     const showMessage = (message) => {
@@ -126,18 +129,36 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       root.append(element);
     };
 
-    const renderReleases = (releases) => {
+    const renderReleaseItems = () => {
+      root.find('.lampa-3d-movies__result').remove();
+      const visible = activeTracker === 'all' ? allReleases : allReleases.filter((release) => release.tracker === activeTracker);
+      visible.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
+    };
+
+    const renderReleases = (releases, sources = []) => {
       clearResults();
-
-      if (releases.length === 0) {
-        showMessage('No 3D releases found');
-        return;
+      allReleases = releases;
+      activeTracker = 'all';
+      if (sources.length > 0) {
+        const summary = $('<div class="lampa-3d-movies__source-summary"></div>');
+        summary.text('Available trackers: ' + sources.map((source) => source.name).join(', '));
+        root.append(summary);
       }
-
-      releases.forEach((release) => {
-        const item = createResultElement($, release, Lampa, scroll);
-        root.append(item);
-      });
+      if (releases.length === 0) { showMessage('No 3D releases found'); return; }
+      const trackers = [...new Set(releases.map((release) => release.tracker).filter(Boolean))].sort();
+      if (trackers.length > 0) {
+        const filters = $('<div class="lampa-3d-movies__source-filters"></div>');
+        const addFilter = (id, label, count) => {
+          const filter = $('<div class="lampa-3d-movies__source-filter selector"></div>');
+          filter.text(label + ' (' + count + ')');
+          filter.on('hover:enter', () => { activeTracker = id; renderReleaseItems(); scroll.update(filter); });
+          filters.append(filter);
+        };
+        addFilter('all', 'All sources', releases.length);
+        trackers.forEach((tracker) => addFilter(tracker, tracker, releases.filter((release) => release.tracker === tracker).length));
+        root.append(filters);
+      }
+      renderReleaseItems();
     };
 
     const runSearch = async (query) => {
@@ -179,7 +200,13 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
 
         if (disposed || currentSequence !== searchSequence) return;
 
-        renderReleases(result.releases);
+        let sources = [];
+        if (typeof configured.listSources === 'function') {
+          try { sources = await configured.listSources({ signal: controller.signal }); }
+          catch (_error) { /* Search results still include per-release tracker names. */ }
+        }
+        if (disposed || currentSequence !== searchSequence) return;
+        renderReleases(result.releases, sources);
 
         if (result.errors.length > 0) {
           const failed = result.errors.map((entry) => entry.providerId).join(', ');

@@ -102,6 +102,8 @@ export class ProwlarrProvider {
         format: detection.format,
         resolution: detectResolution(title),
         ...parseReleaseMetadata(title, item.description),
+        tracker: typeof item.indexer === 'string' ? item.indexer : null,
+        trackerId: typeof item.indexerId === 'string' ? String(item.indexerId) : null,
         sizeBytes: optionalNonNegativeInteger(item.size),
         seeders: optionalNonNegativeInteger(item.seeders),
         url: downloadUrl,

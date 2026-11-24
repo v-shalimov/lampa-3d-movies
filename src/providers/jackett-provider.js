@@ -59,6 +59,8 @@ function mapResult(item, providerId) {
     format: detection.format,
     resolution: detectResolution(title),
     ...parseReleaseMetadata(title, item.Description),
+    tracker: typeof item.Tracker === 'string' ? item.Tracker : null,
+    trackerId: typeof item.TrackerId === 'string' ? item.TrackerId : null,
     sizeBytes: optionalNonNegativeInteger(item.Size),
     seeders: optionalNonNegativeInteger(item.Seeders),
     url: magnetUri || link,
@@ -101,6 +103,39 @@ export class JackettProvider {
     }
 
     this.fetchImpl = fetchImpl;
+  }
+
+  async listIndexers({ signal } = {}) {
+    const url = new URL(`${this.baseUrl}/api/v2.0/indexers`);
+    if (this.apiKey) url.searchParams.set('apikey', this.apiKey);
+
+    const response = await this.fetchImpl(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+
+    if (!response || response.ok !== true) {
+      const status = response?.status ?? 'unknown';
+      throw new Error(`Jackett indexer list failed with HTTP ${status}`);
+    }
+
+    const payload = await response.json();
+    if (!Array.isArray(payload)) {
+      throw new TypeError('Jackett indexer list must be an array');
+    }
+
+    return payload
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        id: typeof item.id === 'string' ? item.id : '',
+        name: typeof item.name === 'string' ? item.name : (
+          typeof item.title === 'string' ? item.title : ''
+        ),
+        configured: item.configured !== false,
+        status: typeof item.status === 'string' ? item.status : null,
+      }))
+      .filter((item) => item.id && item.name);
   }
 
   async search(query, { signal } = {}) {
