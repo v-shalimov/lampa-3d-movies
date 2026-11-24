@@ -230,8 +230,11 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // Do not override ActivitySlide's native content controller: its back handler
-    // already calls Lampa.Activity.backward() and owns the header navigation.
+    // ActivitySlide invokes component.start() unconditionally. Keep the required
+    // lifecycle hook, but do not register a custom controller: ActivitySlide's
+    // native content controller must retain ownership of back navigation.
+    this.start = function start() {};
+
     this.stop = function stop() {};
 
     this.destroy = function destroy() {
