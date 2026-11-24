@@ -80,6 +80,7 @@ export function createLampaFetch(RequestConstructor) {
               ok: true,
               status: 200,
               text: async () => text,
+              json: async () => JSON.parse(text),
             });
           },
           (xhr, exception) => {
