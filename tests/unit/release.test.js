@@ -25,6 +25,8 @@ describe('createRelease', () => {
       bitrateMbps: null,
       source: null,
       hdr: null,
+      tracker: null,
+      trackerId: null,
     });
   });
 
