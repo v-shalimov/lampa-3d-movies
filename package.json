@@ -1,0 +1,17 @@
+{
+  "name": "lampa-3d-movies",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A 3D movie discovery extension for LAMPA",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
