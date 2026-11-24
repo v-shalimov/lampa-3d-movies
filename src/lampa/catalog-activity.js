@@ -17,7 +17,7 @@ function formatSize(sizeBytes) {
   return `${size.toFixed(digits)} ${units[unit]}`;
 }
 
-function createResultElement($, release, Lampa) {
+function createResultElement($, release, Lampa, scroll) {
   const item = $(`
     <div class="lampa-3d-movies__result selector">
       <div class="lampa-3d-movies__result-title"></div>
@@ -25,15 +25,34 @@ function createResultElement($, release, Lampa) {
     </div>
   `);
 
+  const formatLabel = ({
+    HALF_SBS: 'Half-SBS',
+    FULL_SBS: 'Full-SBS',
+    HALF_OU: 'Half-OU',
+    FULL_OU: 'Full-OU',
+    UNKNOWN: '3D · layout unspecified',
+  })[release.format] || '3D';
+
+  const technical = [
+    release.videoCodec,
+    release.audioCodec,
+    release.audioLanguages?.length ? release.audioLanguages.join(' / ') : '',
+    release.bitrateMbps ? `${release.bitrateMbps} Mbps` : '',
+    release.source,
+    release.hdr,
+  ].filter(Boolean);
+
   const meta = [
-    release.format,
+    formatLabel,
     release.resolution,
     formatSize(release.sizeBytes),
     release.seeders == null ? '' : `${release.seeders} seeders`,
   ].filter(Boolean).join(' · ');
 
   item.find('.lampa-3d-movies__result-title').text(release.title);
-  item.find('.lampa-3d-movies__result-meta').text(meta);
+  item.find('.lampa-3d-movies__result-meta').text([meta, technical.join(' · ')].filter(Boolean).join('  |  '));
+
+  item.on('hover:focus', () => scroll.update(item));
 
   item.on('hover:enter', () => {
     const torrent = Lampa.Torrent;
@@ -116,7 +135,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       }
 
       releases.forEach((release) => {
-        const item = createResultElement($, release, Lampa);
+        const item = createResultElement($, release, Lampa, scroll);
         root.append(item);
       });
     };

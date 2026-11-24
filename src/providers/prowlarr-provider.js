@@ -1,5 +1,6 @@
 import { detect3DFormat } from '../domain/format-detector.js';
 import { createRelease } from '../domain/release.js';
+import { parseReleaseMetadata } from '../domain/release-metadata.js';
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -100,6 +101,7 @@ export class ProwlarrProvider {
         title,
         format: detection.format,
         resolution: detectResolution(title),
+        ...parseReleaseMetadata(title, item.description),
         sizeBytes: optionalNonNegativeInteger(item.size),
         seeders: optionalNonNegativeInteger(item.seeders),
         url: downloadUrl,

@@ -19,6 +19,12 @@ describe('createRelease', () => {
       sizeBytes: null,
       seeders: null,
       url: null,
+      videoCodec: null,
+      audioCodec: null,
+      audioLanguages: [],
+      bitrateMbps: null,
+      source: null,
+      hdr: null,
     });
   });
 

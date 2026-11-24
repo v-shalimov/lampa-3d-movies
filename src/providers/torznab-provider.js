@@ -1,6 +1,7 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { detect3DFormat } from '../domain/format-detector.js';
 import { createRelease } from '../domain/release.js';
+import { parseReleaseMetadata } from '../domain/release-metadata.js';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -99,6 +100,7 @@ function mapItem(item, providerId) {
     title,
     format: detection.format,
     resolution: detectResolution(title),
+    ...parseReleaseMetadata(title, getText(item.description)),
     sizeBytes: optionalNonNegativeInteger(size),
     seeders: optionalNonNegativeInteger(getTorznabAttribute(item, 'seeders')),
     url: magnet || link || null,
