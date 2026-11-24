@@ -41,6 +41,7 @@ export function createLampaFetch(RequestConstructor) {
 
     return new Promise((resolve, reject) => {
       const request = new RequestConstructor();
+      if (typeof request.timeout === 'function') request.timeout(20_000);
       let settled = false;
 
       const cleanup = () => {
