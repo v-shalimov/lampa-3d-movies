@@ -13,6 +13,7 @@ describe('createLampaFetch', () => {
     const fetch = createLampaFetch(Request);
     const response = await fetch('https://indexer.example/api?t=search');
 
+    expect(Request.mock.instances[0].timeout).toHaveBeenCalledWith(20_000);
     expect(native).toHaveBeenCalledWith(
       'https://indexer.example/api?t=search',
       expect.any(Function),
