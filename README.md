@@ -82,6 +82,9 @@ configuration; keep those in the host application's secure settings.
 
 ```js
 import { ProviderRegistry } from './src/services/provider-registry.js';
+import { JackettProvider } from './src/providers/jackett-provider.js';
+import { TorznabProvider } from './src/providers/torznab-provider.js';
+import { SearchService } from './src/services/search-service.js';
 
 const providers = new ProviderRegistry([
   new JackettProvider({
