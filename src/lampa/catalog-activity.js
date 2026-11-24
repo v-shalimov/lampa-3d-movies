@@ -49,6 +49,10 @@ function createResultElement($, release, Lampa) {
       return;
     }
 
+    if (typeof torrent.back === 'function') {
+      torrent.back(() => Lampa.Controller.toggle('content'));
+    }
+
     torrent.start(mapped, { title: release.title });
   });
 
