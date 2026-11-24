@@ -140,8 +140,7 @@
       ((_a = release.audioLanguages) == null ? void 0 : _a.length) ? release.audioLanguages.join(" / ") : "",
       release.bitrateMbps ? `${release.bitrateMbps} Mbps` : "",
       release.source,
-      release.hdr,
-      release.tracker ? "Source: " + release.tracker : ""
+      release.hdr
     ].filter(Boolean);
     const meta = [
       formatLabel,
@@ -190,7 +189,6 @@
       let searchSequence = 0;
       let lastQuery = typeof activityParams.search === "string" ? activityParams.search : "";
       let allReleases = [];
-      let activeTracker = "all";
       scroll.minus();
       scroll.body().addClass("lampa-3d-movies__scroll");
       const scrollNode = scroll.render() && scroll.render()[0];
@@ -210,43 +208,21 @@
         searchButton.find(".lampa-3d-movies__search-query").text(lastQuery || "Select to enter a movie title");
       };
       const clearResults = () => {
-        root.find(".lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-summary").remove();
+        root.find(".lampa-3d-movies__result, .lampa-3d-movies__message, .lampa-3d-movies__source-filter, .lampa-3d-movies__source-filters, .lampa-3d-movies__source-summary").remove();
       };
       const showMessage = (message) => {
         const element = $('<div class="lampa-3d-movies__message"></div>');
         element.text(message);
         root.append(element);
       };
-      const renderReleaseItems = () => {
-        root.find(".lampa-3d-movies__result").remove();
-        const visible = activeTracker === "all" ? allReleases : allReleases.filter((release) => release.tracker === activeTracker);
-        visible.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
-      };
-      const renderReleases = (releases, sources = []) => {
+      const renderReleases = (releases) => {
         clearResults();
         allReleases = releases;
-        activeTracker = "all";
         if (releases.length === 0) {
           showMessage("No 3D releases found");
           return;
         }
-        const trackers = [...new Set(releases.map((release) => release.tracker).filter(Boolean))].sort();
-        if (trackers.length > 0) {
-          const filters = $('<div class="lampa-3d-movies__source-filters"></div>');
-          const addFilter = (id, label, count) => {
-            const filter = $('<div class="lampa-3d-movies__source-filter selector"></div>');
-            filter.text(label + " (" + count + ")");
-            filter.on("hover:enter", () => {
-              activeTracker = id;
-              renderReleaseItems();
-              scroll.update(filter);
-            });
-            filters.append(filter);
-          };
-          trackers.forEach((tracker) => addFilter(tracker, tracker, releases.filter((release) => release.tracker === tracker).length));
-          root.append(filters);
-        }
-        renderReleaseItems();
+        releases.forEach((release) => root.append(createResultElement($, release, Lampa, scroll)));
       };
       const runSearch = async (query) => {
         const normalizedQuery = typeof query === "string" ? query.trim() : "";
@@ -279,15 +255,7 @@
             signal: controller.signal
           });
           if (disposed || currentSequence !== searchSequence) return;
-          let sources = [];
-          if (typeof configured.listSources === "function") {
-            try {
-              sources = await configured.listSources({ signal: controller.signal });
-            } catch (_error) {
-            }
-          }
-          if (disposed || currentSequence !== searchSequence) return;
-          renderReleases(result.releases, sources);
+          renderReleases(result.releases);
           if (result.errors.length > 0) {
             const failed = result.errors.map((entry) => entry.providerId).join(", ");
             showMessage(`Some providers failed: ${failed}`);
@@ -320,19 +288,6 @@
       };
       this.render = function render() {
         return scroll.render();
-      };
-      this.start = function start() {
-        Lampa.Controller.add("content", {
-          toggle: () => {
-            Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(false, scroll.render());
-          },
-          back: () => {
-            if (activeController) activeController.abort();
-            Lampa.Activity.backward();
-          }
-        });
-        Lampa.Controller.toggle("content");
       };
       this.stop = function stop() {
       };
