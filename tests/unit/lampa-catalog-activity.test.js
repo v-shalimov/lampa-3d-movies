@@ -80,7 +80,7 @@ describe('createLampaCatalogActivity', () => {
     activity.create();
 
     expect(host.scroll.minus).toHaveBeenCalledOnce();
-    expect(activity.start).toBeUndefined();
+    expect(activity.start).toEqual(expect.any(Function));
     expect(host.Lampa.Controller.add).not.toHaveBeenCalled();
   });
 
