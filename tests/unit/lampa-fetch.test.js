@@ -72,6 +72,17 @@ describe('createLampaFetch', () => {
     });
   });
 
+  it('adapts JSON responses for the Jackett provider', async () => {
+    const Request = vi.fn(function Request() {
+      this.native = (url, success) => success('{"Results":[]}');
+      this.clear = vi.fn();
+    });
+    const fetch = createLampaFetch(Request);
+    const response = await fetch('https://jackett.example/api');
+
+    await expect(response.json()).resolves.toEqual({ Results: [] });
+  });
+
   it('rejects if the request constructor is missing', () => {
     expect(() => createLampaFetch()).toThrow(TypeError);
   });
