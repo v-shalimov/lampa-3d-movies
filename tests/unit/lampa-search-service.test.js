@@ -62,6 +62,27 @@ describe('createLampaSearchService', () => {
     expect(searchService.providers).toHaveLength(0);
   });
 
+  it('honors LAMPA preference to search only healthy Jackett indexers', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ Results: [] }),
+    });
+    const { searchService } = createLampaSearchService({
+      readSetting: makeReadSetting({
+        jackett_url: 'http://jackett.local',
+        jackett_key: 'key',
+        jackett_interview: 'healthy',
+      }),
+      fetchImpl,
+    });
+
+    await searchService.search('Avatar');
+
+    const requestUrl = new URL(fetchImpl.mock.calls[0][0]);
+    expect(requestUrl.pathname).toBe('/api/v2.0/indexers/status%3Ahealthy/results');
+  });
+
   it('rejects invalid host dependencies', () => {
     expect(() => createLampaSearchService({
       readSetting: null,
