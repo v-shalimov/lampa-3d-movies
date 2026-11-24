@@ -12,6 +12,7 @@ class FakeElement {
   addClass() { return this; }
   append(child) { this.children.push(child); return this; }
   remove() { this.removed = true; return this; }
+  off(event) { delete this.events[event]; return this; }
   detach() { return this; }
   text(value) { this.textValue = value; return this; }
   find(selector) {
@@ -19,12 +20,15 @@ class FakeElement {
     return this.values[selector];
   }
   on(event, handler) { this.events[event] = handler; return this; }
-  trigger(event) { this.events[event]?.(); return this; }
+  trigger(event, ...args) { this.events[event]?.(...args); return this; }
 }
 
 function makeHost() {
   const elements = [];
+  const headerBack = new FakeElement('.head__backward');
+  headerBack.length = 1;
   const $ = (markup) => {
+    if (markup === '.head__backward') return headerBack;
     const element = new FakeElement(markup);
     elements.push(element);
     return element;
@@ -42,7 +46,8 @@ function makeHost() {
     Scroll: vi.fn(() => scroll),
     Input: { edit: vi.fn() },
     Controller: {
-      enabled: () => ({ name: 'content' }),
+      enabled: vi.fn(() => ({ name: 'content' })),
+      back: vi.fn(),
       toggle: vi.fn(),
       add: vi.fn(),
       collectionSet: vi.fn(),
@@ -53,7 +58,7 @@ function makeHost() {
     Noty: { show: vi.fn() },
   };
 
-  return { Lampa, $, scroll, elements };
+  return { Lampa, $, scroll, elements, headerBack };
 }
 
 const release = {
@@ -84,6 +89,63 @@ describe('createLampaCatalogActivity', () => {
     expect(host.Lampa.Controller.add).not.toHaveBeenCalled();
   });
 
+
+  it('routes the LAMPA header back arrow directly to Activity.backward', () => {
+    const host = makeHost();
+    const Activity = createLampaCatalogActivity(host.Lampa, () => ({
+      registry: { size: 0 },
+      searchService: { search: vi.fn() },
+    }), host.$);
+    const activity = new Activity({});
+    activity.activity = { loader: vi.fn(), toggle: vi.fn() };
+
+    activity.start();
+
+    const event = {
+      preventDefault: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    host.headerBack.trigger('click', event);
+
+    expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
+    expect(host.Lampa.Controller.back).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopImmediatePropagation).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Controller.back for modal and overlay navigation', () => {
+    const host = makeHost();
+    const Activity = createLampaCatalogActivity(host.Lampa, () => ({
+      registry: { size: 0 },
+      searchService: { search: vi.fn() },
+    }), host.$);
+    const activity = new Activity({});
+    activity.activity = { loader: vi.fn(), toggle: vi.fn() };
+
+    activity.start();
+    host.Lampa.Controller.enabled.mockReturnValue({ name: 'modal' });
+    host.headerBack.trigger('click', { preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() });
+
+    expect(host.Lampa.Controller.back).toHaveBeenCalledOnce();
+    expect(host.Lampa.Activity.backward).not.toHaveBeenCalled();
+  });
+
+  it('restores LAMPA native header back handler when activity stops', () => {
+    const host = makeHost();
+    const Activity = createLampaCatalogActivity(host.Lampa, () => ({
+      registry: { size: 0 },
+      searchService: { search: vi.fn() },
+    }), host.$);
+    const activity = new Activity({});
+    activity.activity = { loader: vi.fn(), toggle: vi.fn() };
+
+    activity.start();
+    activity.stop();
+    host.headerBack.trigger('click');
+
+    expect(host.Lampa.Controller.back).toHaveBeenCalledOnce();
+    expect(host.Lampa.Activity.backward).not.toHaveBeenCalled();
+  });
 
   it('searches configured providers and starts playback through LAMPA', async () => {
     const host = makeHost();

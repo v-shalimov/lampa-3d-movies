@@ -230,14 +230,42 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // ActivitySlide invokes component.start() unconditionally. Keep the required
-    // lifecycle hook, but do not register a custom controller: ActivitySlide's
-    // native content controller must retain ownership of back navigation.
-    this.start = function start() {};
+    // ActivitySlide's content controller owns remote/keyboard back navigation.
+    // On desktop LAMPA's visible header arrow calls Controller.back() through
+    // its own click handler. While this activity is active, route that arrow
+    // directly to Activity.backward() for the content controllers; preserve
+    // Controller.back() for overlays such as the search input.
+    const restoreHeaderBack = () => {
+      const backButton = $('.head__backward');
+      if (!backButton.length) return;
 
-    this.stop = function stop() {};
+      backButton.off('click');
+      backButton.on('click', Lampa.Controller.back.bind(Lampa.Controller));
+    };
+
+    this.start = function start() {
+      const backButton = $('.head__backward');
+      if (!backButton.length) return;
+
+      backButton.off('click');
+      backButton.on('click', (event) => {
+        const controllerName = Lampa.Controller.enabled().name;
+        if (['content', 'head', 'menu'].includes(controllerName)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          Lampa.Activity.backward();
+        } else {
+          Lampa.Controller.back();
+        }
+      });
+    };
+
+    this.stop = function stop() {
+      restoreHeaderBack();
+    };
 
     this.destroy = function destroy() {
+      restoreHeaderBack();
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
