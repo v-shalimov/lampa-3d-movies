@@ -37,7 +37,7 @@ describe('createLampaFetch', () => {
     expect(Request).not.toHaveBeenCalled();
   });
 
-  it('clears the Lampa request and rejects when aborted in flight', async () => {
+  it('suppresses late LAMPA callbacks and rejects when aborted in flight', async () => {
     let onSuccess;
     const request = {
       native: vi.fn((url, success) => { onSuccess = success; }),
