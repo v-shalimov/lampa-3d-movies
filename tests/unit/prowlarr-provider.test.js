@@ -56,7 +56,7 @@ describe('ProwlarrProvider', () => {
     expect(releases).toHaveLength(1);
     expect(releases[0]).toMatchObject({
       providerId: 'prowlarr-primary',
-      providerReleaseId: 'https://indexer.example/guid/1',
+      providerReleaseId: '0123456789abcdef0123456789abcdef01234567',
       title: 'Dune Part Two 2024 3D Half-SBS 1080p',
       format: 'HALF_SBS',
       resolution: '1080p',
@@ -79,6 +79,25 @@ describe('ProwlarrProvider', () => {
     expect(fetchImpl.mock.calls[0][0]).toBe(
       'https://media.example/prowlarr/api/v1/search?apikey=key&query=Avatar',
     );
+  });
+
+  it('falls back to the Prowlarr GUID when the download URL has no BTIH hash', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(makeResponse([{
+      protocol: 'torrent',
+      title: 'Avatar 2009 3D Full-OU 1080p',
+      guid: 'https://indexer.example/release/42',
+      downloadUrl: 'https://indexer.example/download/42',
+    }]));
+    const provider = new ProwlarrProvider({
+      baseUrl: 'https://prowlarr.example',
+      apiKey: 'key',
+      fetchImpl,
+    });
+
+    const [release] = await provider.search('Avatar');
+
+    expect(release.providerReleaseId).toBe('https://indexer.example/release/42');
+    expect(release.url).toBe('https://indexer.example/download/42');
   });
 
   it('rejects non-array responses and HTTP errors', async () => {
