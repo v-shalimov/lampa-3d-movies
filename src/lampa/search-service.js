@@ -1,5 +1,6 @@
 import { JackettProvider } from '../providers/jackett-provider.js';
 import { TorznabProvider } from '../providers/torznab-provider.js';
+import { ProwlarrProvider } from '../providers/prowlarr-provider.js';
 import { ProviderRegistry } from '../services/provider-registry.js';
 import { SearchService } from '../services/search-service.js';
 import { createLampaFetch } from './lampa-fetch.js';
@@ -35,6 +36,25 @@ export function createLampaSearchService({ readSetting, fetchImpl }) {
 
     if (baseUrl && apiKey) {
       providers.push(new JackettProvider({
+        id: pair.id,
+        baseUrl,
+        apiKey,
+        fetchImpl,
+      }));
+    }
+  }
+
+  const prowlarrPairs = [
+    { urlKey: 'prowlarr_url', apiKeyKey: 'prowlarr_key', id: 'prowlarr-primary' },
+    { urlKey: 'prowlarr_url_two', apiKeyKey: 'prowlarr_key_two', id: 'prowlarr-secondary' },
+  ];
+
+  for (const pair of prowlarrPairs) {
+    const baseUrl = readString(readSetting, pair.urlKey);
+    const apiKey = readString(readSetting, pair.apiKeyKey);
+
+    if (baseUrl && apiKey) {
+      providers.push(new ProwlarrProvider({
         id: pair.id,
         baseUrl,
         apiKey,
