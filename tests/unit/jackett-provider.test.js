@@ -35,12 +35,11 @@ describe('JackettProvider', () => {
     expect(url.searchParams.get('Query')).toBe('Avatar');
     expect(requestOptions.method).toBe('GET');
 
-    expect(releases).toHaveLength(4);
+    expect(releases).toHaveLength(3);
     expect(releases.map(({ format }) => format)).toEqual([
       'HALF_SBS',
       'FULL_SBS',
       'HALF_OU',
-      'UNKNOWN',
     ]);
     expect(releases[0]).toMatchObject({
       providerId: 'jackett',
@@ -142,7 +141,7 @@ describe('JackettProvider', () => {
     const result = await service.search('Avatar');
 
     expect(result.errors).toEqual([]);
-    expect(result.releases).toHaveLength(4);
+    expect(result.releases).toHaveLength(3);
     expect(result.releases.every((release) => release.providerId === 'jackett')).toBe(true);
   });
 
