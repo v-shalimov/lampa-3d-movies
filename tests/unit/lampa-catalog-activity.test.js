@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+afterEach(() => vi.unstubAllGlobals());
 import { createLampaCatalogActivity } from '../../src/lampa/catalog-activity.js';
 
 class FakeElement {
@@ -21,6 +23,27 @@ class FakeElement {
   }
   on(event, handler) { this.events[event] = handler; return this; }
   trigger(event, ...args) { this.events[event]?.(...args); return this; }
+}
+
+function makeDocument() {
+  const listeners = new Map();
+  return {
+    addEventListener: vi.fn((type, handler, options) => {
+      const entries = listeners.get(type) || [];
+      entries.push({ handler, options });
+      listeners.set(type, entries);
+    }),
+    removeEventListener: vi.fn((type, handler, options) => {
+      const entries = listeners.get(type) || [];
+      listeners.set(type, entries.filter((entry) => entry.handler !== handler || entry.options !== options));
+    }),
+    dispatch(type, event) {
+      (listeners.get(type) || []).forEach(({ handler }) => handler(event));
+    },
+    listenerCount(type) {
+      return (listeners.get(type) || []).length;
+    },
+  };
 }
 
 function makeHost() {
@@ -93,7 +116,9 @@ describe('createLampaCatalogActivity', () => {
   });
 
 
-  it('routes the active LAMPA content controller back callback to Activity.backward', () => {
+  it('captures a trackpad click on the LAMPA header back arrow', () => {
+    const fakeDocument = makeDocument();
+    vi.stubGlobal('document', fakeDocument);
     const host = makeHost();
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
@@ -103,16 +128,24 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
-    host.nativeContentController.back();
+    const event = {
+      target: { closest: vi.fn((selector) => selector === '.head__backward' ? {} : null) },
+      preventDefault: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    fakeDocument.dispatch('click', event);
 
     expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
-    expect(host.nativeContentController.back).not.toBeUndefined();
+    expect(event.target.closest).toHaveBeenCalledWith('.head__backward');
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopImmediatePropagation).toHaveBeenCalledOnce();
   });
 
-  it('does not patch non-content controllers used by overlays', () => {
+  it('does not intercept the header click while an overlay controller is active', () => {
+    const fakeDocument = makeDocument();
+    vi.stubGlobal('document', fakeDocument);
     const host = makeHost();
-    const overlayController = { back: vi.fn() };
-    host.Lampa.Controller.enabled.mockReturnValue({ name: 'modal', controller: overlayController });
+    host.Lampa.Controller.enabled.mockReturnValue({ name: 'modal' });
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
       searchService: { search: vi.fn() },
@@ -121,15 +154,21 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
-    overlayController.back();
+    const event = {
+      target: { closest: () => ({}) },
+      preventDefault: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    fakeDocument.dispatch('click', event);
 
-    expect(overlayController.back).toHaveBeenCalledOnce();
     expect(host.Lampa.Activity.backward).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
   });
 
-  it('restores the native content back callback when activity stops', () => {
+  it('removes the header click capture listener when activity stops', () => {
+    const fakeDocument = makeDocument();
+    vi.stubGlobal('document', fakeDocument);
     const host = makeHost();
-    const originalBack = host.nativeContentController.back;
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
       searchService: { search: vi.fn() },
@@ -138,10 +177,10 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.start();
-    expect(host.nativeContentController.back).not.toBe(originalBack);
+    expect(fakeDocument.listenerCount('click')).toBe(1);
 
     activity.stop();
-    expect(host.nativeContentController.back).toBe(originalBack);
+    expect(fakeDocument.listenerCount('click')).toBe(0);
   });
 
   it('searches configured providers and starts playback through LAMPA', async () => {

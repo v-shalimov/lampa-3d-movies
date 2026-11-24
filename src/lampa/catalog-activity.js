@@ -230,38 +230,40 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       return scroll.render();
     };
 
-    // ActivitySlide creates the active "content" controller immediately
-    // before calling component.start(). Patch that exact controller object so
-    // both the LAMPA header arrow and remote/keyboard Back reach Activity history.
-    // Do not replace the controller: preserve all native navigation callbacks.
-    let patchedContentController = null;
-    let originalContentBack = null;
-    const restoreContentBack = () => {
-      if (!patchedContentController) return;
-      patchedContentController.back = originalContentBack;
-      patchedContentController = null;
-      originalContentBack = null;
+    // LAMPA's desktop header arrow has its own click handler which calls
+    // Controller.back(). Intercept the native click in document capture phase,
+    // before that handler runs, and route it to Activity history for this screen.
+    // Overlay controllers are left alone so their own Back behavior is preserved.
+    let headerBackClick = null;
+    const detachHeaderBackClick = () => {
+      if (!headerBackClick || typeof document === 'undefined') return;
+      document.removeEventListener('click', headerBackClick, true);
+      headerBackClick = null;
     };
 
     this.start = function start() {
-      const enabled = Lampa.Controller.enabled();
-      if (enabled?.name !== 'content' || !enabled.controller) return;
+      if (typeof document === 'undefined') return;
+      detachHeaderBackClick();
+      headerBackClick = (event) => {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function' || !target.closest('.head__backward')) return;
 
-      const controller = enabled.controller;
-      if (controller === patchedContentController) return;
+        const controllerName = Lampa.Controller.enabled().name;
+        if (!['content', 'head', 'menu'].includes(controllerName)) return;
 
-      restoreContentBack();
-      patchedContentController = controller;
-      originalContentBack = controller.back;
-      controller.back = () => Lampa.Activity.backward();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        Lampa.Activity.backward();
+      };
+      document.addEventListener('click', headerBackClick, true);
     };
 
     this.stop = function stop() {
-      restoreContentBack();
+      detachHeaderBackClick();
     };
 
     this.destroy = function destroy() {
-      restoreContentBack();
+      detachHeaderBackClick();
       disposed = true;
       searchSequence += 1;
       if (activeController) activeController.abort();
