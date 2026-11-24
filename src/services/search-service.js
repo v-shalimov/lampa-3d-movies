@@ -188,7 +188,7 @@ export class SearchService {
             : null;
           const key = infoHash
             ? `infohash:${infoHash}`
-            : `provider:${release.providerId}\\u0000${releaseId}`;
+            : `provider:${release.providerId}\u0000${releaseId}`;
 
           if (!seenReleaseIds.has(key)) {
             seenReleaseIds.add(key);
