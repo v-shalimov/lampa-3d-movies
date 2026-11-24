@@ -1,4 +1,5 @@
 import { mapReleaseToLampaTorrent } from './release-mapper.js';
+import { createAbortController } from '../utils/abort-controller.js';
 
 function formatSize(sizeBytes) {
   if (!Number.isSafeInteger(sizeBytes) || sizeBytes < 0) return '';
@@ -133,7 +134,7 @@ export function createLampaCatalogActivity(Lampa, searchServiceFactory, $) {
       }
 
       if (activeController) activeController.abort();
-      activeController = new AbortController();
+      activeController = createAbortController();
       const controller = activeController;
       const currentSequence = ++searchSequence;
 
