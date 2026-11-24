@@ -25,15 +25,37 @@ function createResultElement($, release, Lampa) {
     </div>
   `);
 
+  const formatLabel = ({
+    HALF_SBS: 'Half-SBS',
+    FULL_SBS: 'Full-SBS',
+    HALF_OU: 'Half-OU',
+    FULL_OU: 'Full-OU',
+    UNKNOWN: '3D · layout unspecified',
+  })[release.format] || '3D';
+
+  const technical = [
+    release.videoCodec,
+    release.audioCodec,
+    release.audioLanguages?.length ? release.audioLanguages.join(' / ') : '',
+    release.bitrateMbps ? `${release.bitrateMbps} Mbps` : '',
+    release.source,
+    release.hdr,
+  ].filter(Boolean);
+
   const meta = [
-    release.format,
+    formatLabel,
     release.resolution,
     formatSize(release.sizeBytes),
     release.seeders == null ? '' : `${release.seeders} seeders`,
   ].filter(Boolean).join(' · ');
 
   item.find('.lampa-3d-movies__result-title').text(release.title);
-  item.find('.lampa-3d-movies__result-meta').text(meta);
+  item.find('.lampa-3d-movies__result-meta').text([meta, technical.join(' · ')].filter(Boolean).join('  |  '));
+
+  item.on('hover:focus', () => {
+    const scroll = item.closest('.scroll');
+    if (scroll && scroll[0]?.Scroll) scroll[0].Scroll.update(item);
+  });
 
   item.on('hover:enter', () => {
     const torrent = Lampa.Torrent;
