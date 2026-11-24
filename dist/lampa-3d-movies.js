@@ -289,11 +289,32 @@
       this.render = function render() {
         return scroll.render();
       };
+      const restoreHeaderBack = () => {
+        const backButton = $(".head__backward");
+        if (!backButton.length) return;
+        backButton.off("click");
+        backButton.on("click", Lampa.Controller.back.bind(Lampa.Controller));
+      };
       this.start = function start() {
+        const backButton = $(".head__backward");
+        if (!backButton.length) return;
+        backButton.off("click");
+        backButton.on("click", (event) => {
+          const controllerName = Lampa.Controller.enabled().name;
+          if (["content", "head", "menu"].includes(controllerName)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            Lampa.Activity.backward();
+          } else {
+            Lampa.Controller.back();
+          }
+        });
       };
       this.stop = function stop() {
+        restoreHeaderBack();
       };
       this.destroy = function destroy() {
+        restoreHeaderBack();
         disposed = true;
         searchSequence += 1;
         if (activeController) activeController.abort();
