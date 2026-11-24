@@ -95,7 +95,7 @@ The current providers accept an injected `fetchImpl`. Do not assume the target L
 
 Implement a LAMPA transport adapter using `new Lampa.Reguest()` and its `native(url, success, error, postData, params)` method. Wrap it in the small Fetch-compatible response shape required by our providers (`ok`, `status`, `text()`, `json()`). On abort, call that request instance's `clear()`. The inspected `Reguest.clear()` implementation removes the request callback from its internal callback list; it does **not** expose or invoke the underlying XHR abort handle. Therefore the adapter can reject immediately and suppress late callbacks, but cannot guarantee that the network transfer itself stops. This keeps provider code independent of LAMPA and gives the host a compatibility path for older WebViews.
 
-The plugin build bundles the ES modules and dependencies into a single IIFE script suitable for LAMPA's script-injection model. The repository build currently targets ES2017; verify this target against the actual LAMPA runtime/browser versions before release.
+The plugin build bundles the ES modules and dependencies into a single IIFE script suitable for LAMPA's script-injection model. The repository build currently targets ES2017; verify this target against the actual LAMPA runtime/browser versions before release. A small AbortController fallback covers the subset of the API used by this project when a target WebView does not expose the native constructor.
 
 ## First vertical slice — implementation status
 
