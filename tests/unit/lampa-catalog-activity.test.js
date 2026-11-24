@@ -97,6 +97,8 @@ describe('createLampaCatalogActivity', () => {
     resultElement.trigger('hover:enter');
 
     expect(host.Lampa.Torrent.back).toHaveBeenCalledWith(expect.any(Function));
+    host.Lampa.Torrent.back.mock.calls[0][0]();
+    expect(host.Lampa.Controller.toggle).toHaveBeenCalledWith('content');
     expect(host.Lampa.Torrent.start).toHaveBeenCalledWith({
       title: release.title,
       Title: release.title,
