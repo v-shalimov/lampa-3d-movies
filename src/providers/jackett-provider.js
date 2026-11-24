@@ -90,7 +90,7 @@ export class JackettProvider {
       throw new TypeError('Jackett baseUrl must use HTTP or HTTPS');
     }
 
-    this.apiKey = requiredString(apiKey, 'apiKey');
+    this.apiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
     this.indexer = requiredString(indexer, 'indexer');
     this.id = requiredString(id, 'id');
 
