@@ -43,6 +43,7 @@ function makeHost() {
     Controller: {
       enabled: () => ({ name: 'content' }),
       toggle: vi.fn(),
+      add: vi.fn(),
     },
     Torrent: { start: vi.fn(), back: vi.fn() },
     Activity: { backward: vi.fn() },
@@ -64,7 +65,7 @@ const release = {
 };
 
 describe('createLampaCatalogActivity', () => {
-  it('returns to the previous LAMPA activity from the catalog back control', () => {
+  it('registers the native LAMPA header back action on the content controller', () => {
     const host = makeHost();
     const Activity = createLampaCatalogActivity(host.Lampa, () => ({
       registry: { size: 0 },
@@ -74,14 +75,16 @@ describe('createLampaCatalogActivity', () => {
     activity.activity = { loader: vi.fn(), toggle: vi.fn() };
 
     activity.create();
+    activity.start();
 
-    const backButton = host.elements.find((element) => (
-      typeof element.markup === 'string' && element.markup.includes('lampa-3d-movies__back')
-    ));
-    expect(backButton).toBeDefined();
-    backButton.trigger('hover:enter');
+    const controller = host.Lampa.Controller.add.mock.calls[0][1];
+    expect(controller.back).toBeTypeOf('function');
+    controller.back();
 
     expect(host.Lampa.Activity.backward).toHaveBeenCalledOnce();
+    expect(host.elements.some((element) => (
+      typeof element.markup === 'string' && element.markup.includes('Back to LAMPA')
+    ))).toBe(false);
   });
 
 
