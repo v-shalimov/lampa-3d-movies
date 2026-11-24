@@ -179,7 +179,6 @@
     return function Lampa3DMoviesActivity(activityParams = {}) {
       const scroll = new Lampa.Scroll({ mask: true, over: true });
       const root = $('<div class="lampa-3d-movies"></div>');
-      const backButton = $('<div class="lampa-3d-movies__back selector">\u2190 Back to LAMPA</div>');
       const searchButton = $(`
       <div class="lampa-3d-movies__search selector">
         <div class="lampa-3d-movies__search-title">Search 3D movies</div>
@@ -193,17 +192,18 @@
       let allReleases = [];
       let activeTracker = "all";
       scroll.body().addClass("lampa-3d-movies__scroll");
-      root.append(backButton);
+      const scrollNode = scroll.render() && scroll.render()[0];
+      const handleMacWheel = (event) => {
+        if (!event.deltaY) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        scroll.wheel(Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 600));
+      };
+      if (scrollNode && typeof scrollNode.addEventListener === "function") {
+        scrollNode.addEventListener("wheel", handleMacWheel, { capture: true, passive: false });
+      }
       root.append(searchButton);
       scroll.append(root);
-      backButton.on("hover:enter", () => {
-        if (activeController) activeController.abort();
-        if (Lampa.Activity && typeof Lampa.Activity.backward === "function") {
-          Lampa.Activity.backward();
-        } else {
-          Lampa.Controller.toggle("content");
-        }
-      });
       const updateSearchLabel = () => {
         searchButton.find(".lampa-3d-movies__search-query").text(lastQuery || "Select to enter a movie title");
       };
@@ -224,11 +224,6 @@
         clearResults();
         allReleases = releases;
         activeTracker = "all";
-        if (sources.length > 0) {
-          const summary = $('<div class="lampa-3d-movies__source-summary"></div>');
-          summary.text("Available trackers: " + sources.map((source) => source.name).join(", "));
-          root.append(summary);
-        }
         if (releases.length === 0) {
           showMessage("No 3D releases found");
           return;
@@ -326,6 +321,13 @@
         return scroll.render();
       };
       this.start = function start() {
+        Lampa.Controller.add("content", {
+          back: () => {
+            if (activeController) activeController.abort();
+            Lampa.Activity.backward();
+          }
+        });
+        Lampa.Controller.toggle("content");
       };
       this.stop = function stop() {
       };
@@ -333,6 +335,9 @@
         disposed = true;
         searchSequence += 1;
         if (activeController) activeController.abort();
+        if (scrollNode && typeof scrollNode.removeEventListener === "function") {
+          scrollNode.removeEventListener("wheel", handleMacWheel, true);
+        }
         scroll.destroy();
         root.remove();
       };
@@ -5539,12 +5544,8 @@
     Lampa.Template.add("lampa_3d_movies_style", `
     <style>
       .lampa-3d-movies__scroll { padding: 1.5em; }
-      .lampa-3d-movies__back {
-        display: inline-block;
-        padding: .65em 1em;
-        margin-bottom: .8em;
-        border-radius: .35em;
-        background: rgba(255,255,255,.1);
+      .lampa-3d-movies__scroll {
+        overscroll-behavior: contain;
       }
       .lampa-3d-movies__search,
       .lampa-3d-movies__result {
