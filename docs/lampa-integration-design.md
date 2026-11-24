@@ -124,7 +124,7 @@ The current UI is deliberately small: no pagination, advanced filters, favorites
 
 ### LAMPA boundary tests
 
-Use a fake `Lampa` host object and injected dependencies:
+The repository now contains Vitest coverage for plugin bootstrap, menu registration, settings-to-provider wiring, network response adaptation, Activity search/playback, and Activity destruction. These tests use a fake `Lampa` host object and injected dependencies; they are not a substitute for a real LAMPA runtime test.
 
 - bootstrap waits for `app:ready` when `appready` is false;
 - bootstrap initializes immediately when `appready` is true;
